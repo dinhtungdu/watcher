@@ -6,11 +6,12 @@ import { stripAnsi } from './text.js';
 import { startDaemon } from './daemon.js';
 import { defaultSocketPath } from './ipc.js';
 import { runHookCommand } from './hook.js';
+import { runHooksInstall, runHooksStatus } from './hooksInstaller.js';
 
 export async function main(argv = process.argv.slice(2)): Promise<number> {
   const [command, ...rest] = argv;
   if (command === 'help' || command === '--help' || command === '-h') {
-    process.stdout.write('watcher - open the Watcher Agent Switcher\n\nCommands:\n  watcher\n  watcher daemon\n  watcher hook <agent> <event>\n');
+    process.stdout.write('watcher - open the Watcher Agent Switcher\n\nCommands:\n  watcher\n  watcher daemon\n  watcher hook <agent> <event>\n  watcher hooks install [agents...]\n  watcher hooks status\n');
     return 0;
   }
   if (command === 'daemon') {
@@ -26,6 +27,25 @@ export async function main(argv = process.argv.slice(2)): Promise<number> {
   }
   if (command === 'hook') {
     return runHookCommand(rest);
+  }
+  if (command === 'hooks') {
+    const [subcommand, ...agents] = rest;
+    if (subcommand === 'install') {
+      try {
+        const result = await runHooksInstall(agents);
+        process.stdout.write(result.output);
+        return result.code;
+      } catch (error) {
+        process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+        return 1;
+      }
+    }
+    if (subcommand === 'status') {
+      process.stdout.write(await runHooksStatus());
+      return 0;
+    }
+    process.stderr.write('Usage: watcher hooks install [agents...] | watcher hooks status\n');
+    return 2;
   }
   if (command) {
     process.stderr.write(`Unknown command: ${command}\n`);
