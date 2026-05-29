@@ -56,7 +56,7 @@ export async function runOpenTuiSwitcher(): Promise<void> {
     return false;
   });
   renderer.on('resize', () => void redraw());
-  const interval = setInterval(() => void redraw(), 1000);
+  const interval = setInterval(() => void redraw(), 2000);
   await redraw();
   renderer.start();
   await new Promise<void>((resolve) => {
