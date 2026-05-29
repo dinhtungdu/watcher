@@ -14,8 +14,9 @@ export async function main(argv = process.argv.slice(2)): Promise<number> {
     return 0;
   }
   if (command === 'daemon') {
+    const detached = rest.includes('--detach');
     const server = await startDaemon({ socketPath: defaultSocketPath() });
-    process.stdout.write(`watcher daemon listening on ${defaultSocketPath()}\n`);
+    if (!detached) process.stdout.write(`watcher daemon listening on ${defaultSocketPath()}\n`);
     await new Promise<void>((resolve) => {
       const close = () => server.close(() => resolve());
       process.once('SIGINT', close);
