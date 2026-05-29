@@ -3,16 +3,32 @@ import { runOpenTuiSwitcher } from './opentuiShell.js';
 import { loadSwitcherSnapshot } from './snapshot.js';
 import { renderSwitcherFrame } from './switcherLayout.js';
 import { stripAnsi } from './text.js';
+import { startDaemon } from './daemon.js';
+import { defaultSocketPath } from './ipc.js';
+import { runHookCommand } from './hook.js';
 
 export async function main(argv = process.argv.slice(2)): Promise<number> {
-  const [command] = argv;
-  if (command && command !== 'help' && command !== '--help' && command !== '-h') {
+  const [command, ...rest] = argv;
+  if (command === 'help' || command === '--help' || command === '-h') {
+    process.stdout.write('watcher - open the Watcher Agent Switcher\n\nCommands:\n  watcher\n  watcher daemon\n  watcher hook <agent> <event>\n');
+    return 0;
+  }
+  if (command === 'daemon') {
+    const server = await startDaemon({ socketPath: defaultSocketPath() });
+    process.stdout.write(`watcher daemon listening on ${defaultSocketPath()}\n`);
+    await new Promise<void>((resolve) => {
+      const close = () => server.close(() => resolve());
+      process.once('SIGINT', close);
+      process.once('SIGTERM', close);
+    });
+    return 0;
+  }
+  if (command === 'hook') {
+    return runHookCommand(rest);
+  }
+  if (command) {
     process.stderr.write(`Unknown command: ${command}\n`);
     return 2;
-  }
-  if (command === 'help' || command === '--help' || command === '-h') {
-    process.stdout.write('watcher - open the Watcher Agent Switcher\n');
-    return 0;
   }
 
   if (process.env.WATCHER_TUI_SNAPSHOT || !process.stdin.isTTY || !process.stdout.isTTY) {
