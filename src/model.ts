@@ -9,6 +9,7 @@ export interface TmuxTarget {
   panePid?: number;
   paneCurrentCommand?: string;
   windowName?: string;
+  paneTitle?: string;
 }
 
 export interface GitMetadata {

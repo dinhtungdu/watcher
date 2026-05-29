@@ -1,11 +1,13 @@
 import { SwitcherRenderState } from './switcherLayout.js';
 import { loadSwitcherSnapshot } from './snapshot.js';
 import { renderSwitcherFrame } from './switcherLayout.js';
+import { createStallTracker } from './stalled.js';
 
 export async function runOpenTuiSwitcher(): Promise<void> {
   const { createCliRenderer, TextRenderable } = await import('@opentui/core');
 
   let state: SwitcherRenderState = { useColor: true, home: process.env.HOME };
+  const stallTracker = createStallTracker();
   let closed = false;
   const renderer = await createCliRenderer({ exitOnCtrlC: false, screenMode: 'alternate-screen', consoleMode: 'disabled' });
   const text = new TextRenderable(renderer, { content: '', width: '100%', height: '100%' });
@@ -13,7 +15,7 @@ export async function runOpenTuiSwitcher(): Promise<void> {
 
   async function redraw(): Promise<void> {
     if (closed) return;
-    const snapshot = await loadSwitcherSnapshot();
+    const snapshot = await loadSwitcherSnapshot({ stallTracker });
     const frame = renderSwitcherFrame(snapshot, renderer.width, renderer.height, state).join('\n');
     text.content = frame;
     renderer.requestLive();

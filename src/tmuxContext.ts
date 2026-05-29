@@ -10,6 +10,7 @@ const PANE_FORMAT = [
   '#{pane_pid}',
   '#{pane_current_command}',
   '#{window_name}',
+  '#{pane_title}',
 ].join('\t');
 
 export async function listTmuxPanes(runner: CommandRunner = nodeCommandRunner): Promise<TmuxTarget[]> {
@@ -27,7 +28,7 @@ export async function getTmuxPane(paneId: string, runner: CommandRunner = nodeCo
 }
 
 function parsePaneLine(line: string): TmuxTarget {
-  const [paneId, sessionName, windowIndex, paneIndex, paneCurrentPath, panePid, paneCurrentCommand, windowName] = line.split('\t');
+  const [paneId, sessionName, windowIndex, paneIndex, paneCurrentPath, panePid, paneCurrentCommand, windowName, paneTitle] = line.split('\t');
   return {
     paneId,
     sessionName,
@@ -37,5 +38,6 @@ function parsePaneLine(line: string): TmuxTarget {
     panePid: panePid ? Number(panePid) : undefined,
     paneCurrentCommand,
     windowName,
+    paneTitle,
   };
 }

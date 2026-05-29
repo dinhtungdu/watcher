@@ -2,10 +2,13 @@ import { SwitcherSnapshot } from './model.js';
 import { CommandRunner, hasTmuxServer, nodeCommandRunner } from './tmux.js';
 import { sendDaemonRequest } from './ipc.js';
 import { discoverUnhookedPanes, mergeDaemonAndDiscovered } from './discovery.js';
+import { deriveStalledStatuses, StallTracker } from './stalled.js';
 
 export interface SnapshotOptions {
   runner?: CommandRunner;
   now?: number;
+  stallTracker?: StallTracker;
+  stalledMs?: number;
 }
 
 export async function loadSwitcherSnapshot(options: SnapshotOptions = {}): Promise<SwitcherSnapshot> {
@@ -21,8 +24,9 @@ export async function loadSwitcherSnapshot(options: SnapshotOptions = {}): Promi
 
   const discovery = await discoverUnhookedPanes(runner, now);
   if (discovery.tmuxAvailable) {
+    const panes = mergeDaemonAndDiscovered(daemonSnapshot?.panes ?? [], discovery.panes, discovery.paneIds);
     return {
-      panes: mergeDaemonAndDiscovered(daemonSnapshot?.panes ?? [], discovery.panes, discovery.paneIds),
+      panes: await deriveStalledStatuses(panes, { now, runner, tracker: options.stallTracker, stalledMs: options.stalledMs }),
       daemonAvailable: daemonSnapshot?.daemonAvailable ?? false,
       tmuxAvailable: true,
       now,
