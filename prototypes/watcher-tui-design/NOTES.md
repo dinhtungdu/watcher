@@ -6,6 +6,6 @@ Decision to test: Watcher should group worktrees of the same repo together, disp
 
 Coverage: fake data includes one repo with multiple worktree paths (`watcher > main ~/workspace/watcher`, `watcher > feature/tui-redesign ~/workspace/watcher-tui-redesign`), multiple sessions in the same worktree/branch, and non-git panes grouped by path fallback.
 
-Verdict: Accepted as the design direction. Implement the Agent Switcher as `repo > worktree/branch > sessions`, show all non-terminated sessions inside each worktree, keep rows minimal, and put richer selected-session context in the detail pane.
+Verdict: Accepted as the final MVP switcher design. Implement the Agent Switcher as `repo > worktree/branch > sessions`, show all non-terminated sessions inside each worktree, keep rows minimal, and put richer selected-session context in the detail pane. Production code should absorb the grouping, row shape, selection, detail-pane, and responsive layout decisions without importing this throwaway prototype.
 
 Run: `node prototypes/watcher-tui-design/prototype.mjs`

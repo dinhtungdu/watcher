@@ -30,6 +30,8 @@ Watcher is a tmux-wide Agent Switcher. It lists actionable agent panes across al
 
 Show Non-Terminated Agent Panes with statuses `needs_input`, `stalled`, `working`, and `unknown`. Hide `idle` by default.
 
+Use the final prototype layout: `repo > worktree/branch > sessions`.
+
 Group the list as:
 
 1. Repo Group
@@ -44,13 +46,13 @@ Repo and worktree rules:
 - If repository/worktree metadata is unavailable, use a Path Fallback Group keyed by pane path.
 - Show all Non-Terminated Agent Panes within each Worktree Group.
 
-Agent Pane rows should stay minimal:
+Each session row should show only:
 
 - colored status dot
 - agent type
 - task/prompt summary
 
-Do not show status words like `WORK`, `STALL`, or `UNKNOWN` in the row. Do not show a time column in the row.
+Do not show status text badges, time columns, tmux target, cwd, current action, or message previews inline in rows.
 
 Selected Agent Pane details should show:
 
@@ -69,7 +71,7 @@ Responsive layout:
 - medium/narrow terminals: list-first layout with selected summary at the bottom
 - selected row: full-width, theme-adaptive reverse highlight; no hardcoded colors and no selection triangle
 
-Ordering:
+Ordering applies at Repo Group, Worktree Group, and Agent Pane row levels:
 
 1. Repo Groups by highest-priority Non-Terminated Agent Pane, then newest update.
 2. Worktree Groups by highest-priority Non-Terminated Agent Pane, then newest update.
@@ -81,6 +83,8 @@ Status priority:
 2. `stalled`
 3. `working`
 4. `unknown`
+
+Within the same highest-priority status, newest update first.
 
 ## Tmux Discovery
 
