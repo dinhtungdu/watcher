@@ -24,6 +24,22 @@ _Avoid_: Stuck agent
 An explicit integration installed into a supported agent so it can report Agent Status for the current tmux pane.
 _Avoid_: Silent hook, auto hook
 
+**Repo Group**:
+A collection of Agent Panes that belong to the same source repository. Repo Groups contain one or more Worktree Groups.
+_Avoid_: Project group, repo bucket
+
+**Worktree Group**:
+A collection of Agent Panes that share the same Git worktree path within a Repo Group. The branch is displayed as context, but the worktree path is the identity.
+_Avoid_: Branch group, session group
+
+**Path Fallback Group**:
+A collection of Agent Panes grouped by path when Watcher cannot determine repository and worktree identity.
+_Avoid_: Unknown repo, ungrouped panes
+
+**Non-Terminated Agent Pane**:
+An Agent Pane whose Agent Status is working, needs input, stalled, or unknown. Non-Terminated Agent Panes are shown by default; idle panes are hidden.
+_Avoid_: Active session, parked session
+
 **Agent Pane Activation**:
 The user action of jumping from Watcher to the selected Agent Pane.
 _Avoid_: Switch, attach, focus

@@ -26,29 +26,61 @@ Watcher is a tmux-wide Agent Switcher. It lists actionable agent panes across al
 - `unknown`: known agent process exists but no reliable status yet.
 - `idle`: agent finished or is inactive; hidden by default.
 
-## Switcher Rows
+## Switcher Layout
 
-Show rows for `needs_input`, `stalled`, `working`, and `unknown`. Hide `idle`.
+Show Non-Terminated Agent Panes with statuses `needs_input`, `stalled`, `working`, and `unknown`. Hide `idle` by default.
 
-Each row should show:
+Group the list as:
 
-- status
+1. Repo Group
+2. Worktree Group
+3. Agent Pane rows
+
+Repo and worktree rules:
+
+- Group all worktrees from the same repository under one Repo Group.
+- Key Worktree Groups by Git worktree path, not branch name alone.
+- Show branch and worktree path in each Worktree Group header.
+- If repository/worktree metadata is unavailable, use a Path Fallback Group keyed by pane path.
+- Show all Non-Terminated Agent Panes within each Worktree Group.
+
+Agent Pane rows should stay minimal:
+
+- colored status dot
 - agent type
+- task/prompt summary
+
+Do not show status words like `WORK`, `STALL`, or `UNKNOWN` in the row. Do not show a time column in the row.
+
+Selected Agent Pane details should show:
+
+- exact Agent Status
+- agent type
+- repo, branch, and worktree path, or path fallback
 - task/prompt summary
 - current tool/action when available
 - last assistant message preview when available
 - tmux session/window/pane
-- cwd/repo basename
 - last update age
 
+Responsive layout:
+
+- wide terminals: list on the left with a large details pane on the right
+- medium/narrow terminals: list-first layout with selected summary at the bottom
+- selected row: full-width, theme-adaptive reverse highlight; no hardcoded colors and no selection triangle
+
 Ordering:
+
+1. Repo Groups by highest-priority Non-Terminated Agent Pane, then newest update.
+2. Worktree Groups by highest-priority Non-Terminated Agent Pane, then newest update.
+3. Agent Pane rows within a Worktree Group by status priority, then newest update.
+
+Status priority:
 
 1. `needs_input`
 2. `stalled`
 3. `working`
 4. `unknown`
-
-Within each status, newest update first.
 
 ## Tmux Discovery
 

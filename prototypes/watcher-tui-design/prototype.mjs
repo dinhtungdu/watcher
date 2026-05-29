@@ -491,7 +491,7 @@ function detailContent(layout) {
 	const group = paneGroup(pane);
 	return [
 		bold('Now'),
-		`${chip(pane.status)} ${pane.agent} · ${formatAge(ageSeconds(pane))}`,
+		`${chip(pane.status)} ${pane.status} · ${pane.agent} · ${formatAge(ageSeconds(pane))}`,
 		'',
 		bold(group.isGit ? 'Git worktree' : 'Path fallback'),
 		group.isGit ? `repo      ${group.repoTitle}` : `path      ${shortPath(group.path)}`,
