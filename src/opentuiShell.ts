@@ -2,6 +2,8 @@ import { SwitcherRenderState } from './switcherLayout.js';
 import { loadSwitcherSnapshot } from './snapshot.js';
 import { groupPanes, moveSelection, renderSwitcherFrame, selectablePanes } from './switcherLayout.js';
 import { createStallTracker } from './stalled.js';
+import { activateAgentPane } from './activation.js';
+import { AgentPane } from './model.js';
 
 export async function runOpenTuiSwitcher(): Promise<void> {
   const { createCliRenderer, TextRenderable } = await import('@opentui/core');
@@ -9,6 +11,7 @@ export async function runOpenTuiSwitcher(): Promise<void> {
   let state: SwitcherRenderState = { useColor: true, home: process.env.HOME };
   const stallTracker = createStallTracker();
   let currentPanes = [] as ReturnType<typeof selectablePanes>;
+  let pendingActivation: AgentPane | undefined;
   let closed = false;
   const renderer = await createCliRenderer({ exitOnCtrlC: false, screenMode: 'alternate-screen', consoleMode: 'disabled' });
   const text = new TextRenderable(renderer, { content: '', width: '100%', height: '100%' });
@@ -45,6 +48,11 @@ export async function runOpenTuiSwitcher(): Promise<void> {
       void redraw();
       return true;
     }
+    if (sequence === '\r' || sequence === '\n') {
+      pendingActivation = currentPanes.find((pane) => pane.id === state.selectedPaneId) ?? currentPanes[0];
+      shutdown();
+      return true;
+    }
     return false;
   });
   renderer.on('resize', () => void redraw());
@@ -54,4 +62,7 @@ export async function runOpenTuiSwitcher(): Promise<void> {
   await new Promise<void>((resolve) => {
     renderer.on('destroy', () => resolve());
   });
+  if (pendingActivation) {
+    await activateAgentPane(pendingActivation);
+  }
 }

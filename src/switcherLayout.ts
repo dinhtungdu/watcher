@@ -1,4 +1,5 @@
 import { AgentPane, AgentStatus, STATUS_RANK, SwitcherSnapshot, isActionable } from './model.js';
+import { activationTargetLabel } from './activation.js';
 import { basename, bold, dim, fit, formatAge, line, selected, shortPath } from './text.js';
 
 export type LayoutMode = 'narrow' | 'medium' | 'wide';
@@ -222,10 +223,7 @@ function pagedList(groups: RepoGroup[], width: number, height: number, layout: L
 }
 
 function tmuxTarget(pane: AgentPane): string {
-  const session = pane.tmux.sessionName ?? '?';
-  const window = pane.tmux.windowIndex ?? '?';
-  const paneIndex = pane.tmux.paneIndex ?? '?';
-  return `${session}:${window}.${paneIndex} (${pane.tmux.paneId || pane.id})`;
+  return activationTargetLabel(pane);
 }
 
 function detailContent(pane: AgentPane, now: number, home?: string): string[] {
