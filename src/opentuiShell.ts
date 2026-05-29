@@ -1,6 +1,6 @@
 import { SwitcherRenderState } from './switcherLayout.js';
 import { loadSwitcherSnapshot } from './snapshot.js';
-import { renderSwitcherFrame } from './switcherLayout.js';
+import { groupPanes, moveSelection, renderSwitcherFrame, selectablePanes } from './switcherLayout.js';
 import { createStallTracker } from './stalled.js';
 
 export async function runOpenTuiSwitcher(): Promise<void> {
@@ -8,6 +8,7 @@ export async function runOpenTuiSwitcher(): Promise<void> {
 
   let state: SwitcherRenderState = { useColor: true, home: process.env.HOME };
   const stallTracker = createStallTracker();
+  let currentPanes = [] as ReturnType<typeof selectablePanes>;
   let closed = false;
   const renderer = await createCliRenderer({ exitOnCtrlC: false, screenMode: 'alternate-screen', consoleMode: 'disabled' });
   const text = new TextRenderable(renderer, { content: '', width: '100%', height: '100%' });
@@ -16,6 +17,7 @@ export async function runOpenTuiSwitcher(): Promise<void> {
   async function redraw(): Promise<void> {
     if (closed) return;
     const snapshot = await loadSwitcherSnapshot({ stallTracker });
+    currentPanes = selectablePanes(groupPanes(snapshot.panes, snapshot.now, state.home));
     const frame = renderSwitcherFrame(snapshot, renderer.width, renderer.height, state).join('\n');
     text.content = frame;
     renderer.requestLive();
@@ -31,6 +33,16 @@ export async function runOpenTuiSwitcher(): Promise<void> {
   renderer.addInputHandler((sequence) => {
     if (sequence === 'q' || sequence === '\u001b' || sequence === '\u0003') {
       shutdown();
+      return true;
+    }
+    if (sequence === 'k' || sequence === '\u001b[A') {
+      state.selectedPaneId = moveSelection(currentPanes, state.selectedPaneId, -1);
+      void redraw();
+      return true;
+    }
+    if (sequence === 'j' || sequence === '\u001b[B') {
+      state.selectedPaneId = moveSelection(currentPanes, state.selectedPaneId, 1);
+      void redraw();
       return true;
     }
     return false;

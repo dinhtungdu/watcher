@@ -126,8 +126,14 @@ export function groupPanes(panes: AgentPane[], now: number = Date.now(), home?: 
     });
 }
 
-function selectablePanes(groups: RepoGroup[]): AgentPane[] {
+export function selectablePanes(groups: RepoGroup[]): AgentPane[] {
   return groups.flatMap((repo) => repo.worktrees.flatMap((worktree) => worktree.panes));
+}
+
+export function moveSelection(panes: AgentPane[], currentPaneId: string | undefined, delta: number): string | undefined {
+  if (panes.length === 0) return undefined;
+  const index = Math.max(0, panes.findIndex((pane) => pane.id === currentPaneId));
+  return panes[(index + delta + panes.length) % panes.length]?.id;
 }
 
 function headerLines(width: number, groups: RepoGroup[], layout: LayoutMode, useColor: boolean): string[] {
@@ -226,20 +232,23 @@ function detailContent(pane: AgentPane, now: number, home?: string): string[] {
   const group = paneGroup(pane, home);
   return [
     'Now',
-    `${pane.status} · ${pane.agentType} · ${formatAge(ageSeconds(pane, now))}`,
+    `status    ${pane.status}`,
+    `agent     ${pane.agentType}`,
+    `updated   ${formatAge(ageSeconds(pane, now))}`,
     '',
     group.isGit ? 'Git worktree' : 'Path fallback',
     group.isGit ? `repo      ${group.repoTitle}` : `path      ${shortPath(group.path, home)}`,
     group.isGit ? `branch    ${group.branch}` : 'no repo/branch metadata',
     group.isGit ? `worktree  ${shortPath(group.path, home)}` : '',
     '',
-    pane.summary || '(no summary yet)',
-    pane.currentAction || pane.lastMessage || '',
+    `summary   ${pane.summary || '(no summary yet)'}`,
+    pane.currentAction ? `action    ${pane.currentAction}` : '',
+    pane.lastMessage ? `message   ${pane.lastMessage}` : '',
     '',
     'Open',
     tmuxTarget(pane),
     'Watcher exits after activation',
-  ].filter((line) => line !== undefined);
+  ].filter((value) => value !== '');
 }
 
 function boxed(title: string, content: string[], width: number, height: number, useColor: boolean): string[] {
@@ -269,9 +278,11 @@ function helpLines(width: number, layout: LayoutMode, selectedPane: AgentPane | 
   if (layout === 'wide' || !selectedPane) return [fit(dim(line(width), useColor), width, useColor), fit(dim(keys, useColor), width, useColor)];
   const group = paneGroup(selectedPane, home);
   const label = group.isGit ? `${group.repoTitle} · ${group.branch} · ${shortPath(group.path, home)}` : `${shortPath(group.path, home)}`;
+  const context = `${selectedPane.id} ${tmuxTarget(selectedPane)} · ${selectedPane.agentType} · ${selectedPane.status} · ${label}`;
   return [
     fit(dim(line(width), useColor), width, useColor),
-    fit(`${bold('selected', useColor)} ${selectedPane.id} ${tmuxTarget(selectedPane)} · ${selectedPane.agentType} · ${selectedPane.status} · ${label}`, width, useColor),
+    fit(`${bold('selected', useColor)} ${selectedPane.summary || '(no summary yet)'}`, width, useColor),
+    fit(dim(context, useColor), width, useColor),
     fit(dim(keys, useColor), width, useColor),
   ];
 }
