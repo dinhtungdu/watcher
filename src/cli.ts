@@ -1,4 +1,4 @@
-#!/usr/bin/env node
+#!/usr/bin/env bun
 import { runOpenTuiSwitcher } from './opentuiShell.js';
 import { loadSwitcherSnapshot } from './snapshot.js';
 import { renderSwitcherFrame } from './switcherLayout.js';

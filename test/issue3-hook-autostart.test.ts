@@ -1,4 +1,4 @@
-import test from 'node:test';
+import { test } from 'bun:test';
 import assert from 'node:assert/strict';
 import { deliverHookEvent } from '../src/hook.js';
 import { DaemonRequest, DaemonResponse } from '../src/daemon.js';

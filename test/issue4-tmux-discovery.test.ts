@@ -1,4 +1,4 @@
-import test from 'node:test';
+import { test } from 'bun:test';
 import assert from 'node:assert/strict';
 import { CommandRunner } from '../src/tmux.js';
 import { discoverUnhookedPanes, mergeDaemonAndDiscovered } from '../src/discovery.js';

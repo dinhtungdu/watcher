@@ -1,4 +1,4 @@
-import test from 'node:test';
+import { test } from 'bun:test';
 import assert from 'node:assert/strict';
 import { activateAgentPane, activationTargetLabel, buildActivationCommands } from '../src/activation.js';
 import { AgentPane } from '../src/model.js';

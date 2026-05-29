@@ -5,7 +5,7 @@ Watcher is a tmux-wide Agent Switcher. It lists actionable agent panes across al
 ## Scope
 
 - Local tmux only.
-- Node/TypeScript CLI named `watcher`.
+- Bun/TypeScript CLI named `watcher`.
 - OpenTUI core for the switcher UI.
 - In-memory Watcher Daemon.
 - Explicit hooks where supported; tmux/process/title/output fallback while the TUI is open.

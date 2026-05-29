@@ -1,4 +1,4 @@
-import test from 'node:test';
+import { test } from 'bun:test';
 import assert from 'node:assert/strict';
 import { AgentPane } from '../src/model.js';
 import { CommandRunner } from '../src/tmux.js';

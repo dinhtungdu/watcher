@@ -1,3 +1,4 @@
+import fs from 'node:fs';
 import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
@@ -15,6 +16,9 @@ export interface SendOptions {
 export async function sendDaemonRequest(request: DaemonRequest, options: SendOptions = {}): Promise<DaemonResponse> {
   const socketPath = options.socketPath ?? defaultSocketPath();
   const timeoutMs = options.timeoutMs ?? 500;
+  if (!fs.existsSync(socketPath)) {
+    throw new Error(`daemon socket not found: ${socketPath}`);
+  }
   return new Promise<DaemonResponse>((resolve, reject) => {
     const socket = net.createConnection(socketPath);
     let settled = false;
