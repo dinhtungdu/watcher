@@ -5,20 +5,20 @@ Watcher is a tmux-wide Agent Switcher. It lists running agent panes across all l
 ## Scope
 
 - Local tmux only.
-- tmux is the supported backend for discovery, hook identity, stalled detection, and activation.
+- tmux is the supported backend for discovery, Event Surface Identity, stalled detection, and activation.
 - Native Ghostty support is not part of the MVP.
 - Bun/TypeScript CLI named `watcher`.
 - Prototype-aligned terminal switcher UI rendered by the Bun CLI.
 - In-memory Watcher Daemon.
-- Explicit hooks where supported; backend/process/title/output fallback while the TUI is open.
+- Explicit Agent Event Sources where supported; backend/process/title/output fallback while the TUI is open.
 
 ## Commands
 
 - `watcher`: open Agent Switcher.
 - `watcher daemon`: run Watcher Daemon.
-- `watcher hook <agent> <event>`: CLI shim called by agent hooks; reads JSON from stdin and `$TMUX_PANE`.
-- `watcher hooks install [agents...]`: install supported hooks.
-- `watcher hooks status`: show hook install status.
+- `watcher event <agent> <event>`: CLI shim called by Agent Integrations; reads JSON from stdin and `$TMUX_PANE`.
+- `watcher integrations install <agents...>`: install supported Agent Event Sources.
+- `watcher integrations status`: show Agent Event Source install status.
 
 ## Statuses
 
@@ -26,7 +26,7 @@ Agent Status describes priority and context for a running Agent Pane. It does no
 
 - `working`: agent is handling a prompt.
 - `needs_input`: agent needs human input, permission, or decision.
-- `stalled`: agent appears working but has no output/status/title change for 5 minutes.
+- `stalled`: agent appears working but has no output, title, or Watcher Agent Event change for 5 minutes.
 - `unknown`: known agent process exists but no reliable status yet.
 - `idle`: agent finished or is inactive; still shown while the agent pane exists so the switcher can activate it.
 
@@ -98,9 +98,9 @@ While the switcher is open, tmux discovery should:
 - poll `tmux list-panes -a` every 2 seconds
 - detect known agent processes by pane command and one-level process tree scan from `pane_pid`
 - capture pane tail/hash for candidate agent panes only
-- derive `stalled` when status is `working` and no hook/title/output change for 5 minutes
+- derive `stalled` when status is `working` and no Watcher Agent Event, title, or output change occurs for 5 minutes
 
-Native Ghostty discovery, hook identity, and activation are out of MVP. tmux sessions running inside Ghostty remain supported through the tmux backend.
+Native Ghostty discovery, Event Surface Identity, and activation are out of MVP. tmux sessions running inside Ghostty remain supported through the tmux backend.
 
 No ghost panes: if a tmux pane no longer exists, hide it.
 
@@ -111,27 +111,53 @@ No ghost panes: if a tmux pane no longer exists, hide it.
 - Use tmux pane ids like `%42`.
 - Exit TUI before activation/attach/focus.
 
-## Hooks
+## Agent Event Sources
 
-Hooks shell out to `watcher hook <agent> <event>` rather than embedding daemon protocol code.
+Agent Integrations shell out to `watcher event <agent> <event>` rather than embedding daemon protocol code.
 
-`watcher hook`:
+`watcher event`:
 
-- reads `$TMUX_PANE` as pane id
-- reads JSON payload from stdin
+- accepts only known Agent Integrations and normalized Watcher Agent Event names
+- accepts `--quiet` only as `watcher event --quiet <agent> <event>` for generated Agent Event Sources
+- reads Event Surface Identity from the event payload when present
+- falls back to `$TMUX_PANE` as a tmux Event Surface Identity
+- reads normalized Watcher Agent Event JSON from stdin; empty stdin is treated as `{}`
+- validates the canonical payload schema; schema/agent/event errors are loud outside quiet mode and silent in quiet mode
 - starts daemon if absent, retries briefly
 - exits 0 silently if daemon unavailable
 - never breaks the agent
+- must not be called once per token; high-frequency streaming events should be coalesced by the Agent Integration before shelling out
 
-Event mapping:
+Watcher Agent Event mapping:
 
-- `session-start` -> `unknown`
-- `prompt-submit` / `agent-start` -> `working`
-- `needs-input` / `permission` / `question` -> `needs_input`
-- `stop` / `agent-end` -> `idle`
+- `session-started` -> `unknown`
+- `user-message` / `assistant-delta` / `assistant-message` / `tool-started` / `tool-updated` / `tool-finished` -> `working`
+- `needs-input` -> `needs_input`
+- `agent-finished` -> `idle`
 - `error` -> `needs_input` with reason `error`
 
-## Pi MVP Hook
+Watcher Agent Event payload rules:
+
+- event payload identity uses `surface`, not `target`
+- message `text` fields must be strings
+- `assistant-delta.text` is the current accumulated partial assistant text, not an incremental token chunk
+- `tool-updated.text` is the current summarized tool state, not an append-only chunk
+- tool `input` and `output` may be JSON values and are compacted centrally
+- unknown extra fields are ignored, but required canonical fields are strict
+- large text fields are capped centrally at ingestion; normal truncation and wrapping belong to display code
+
+Agent Pane state rules:
+
+- `AgentPane.id` is an internal canonical Event Surface Identity key such as `tmux:%42`; user-facing terminal labels come from the Terminal Target
+- `user-message` sets `userMessage` and row `summary`
+- assistant/tool events never replace `summary` once `userMessage` exists
+- `assistant-delta` updates running activity and `currentAction = "Responding"`, but does not update `lastMessage`
+- `assistant-message` stores a Pending Assistant Message and updates activity, but does not update `lastMessage` until completion
+- `agent-finished` clears activity/current action and sets `lastMessage` from non-empty `finalMessage`, else Pending Assistant Message, else previous `lastMessage`
+- activity items merge by id, are kept newest-first, and are limited to 3 while non-idle
+- `needs-input` preserves recent activity context and may mark referenced activity as waiting
+
+## Pi MVP Agent Event Source
 
 Install global extension:
 
@@ -139,13 +165,16 @@ Install global extension:
 
 Behavior:
 
-- `session_start` -> `watcher hook pi session-start`
-- `before_agent_start` -> `watcher hook pi prompt-submit` with prompt
-- `agent_end` -> `watcher hook pi stop` with last assistant message when available
+- `session_start` -> `watcher event pi session-started`
+- `before_agent_start` -> `watcher event pi user-message` with prompt
+- `message_end` -> `watcher event pi assistant-message` with last completed assistant message
+- `tool_execution_start/update/end` -> `watcher event pi tool-started/tool-updated/tool-finished`
+- `agent_end` -> `watcher event pi agent-finished` with last assistant message when available
 
 Installer:
 
-- overwrite only files with Watcher marker
+- overwrite only files with current or legacy Watcher markers
+- report legacy Watcher-managed files as `outdated` until reinstalled
 - refuse to overwrite non-Watcher file
 - after install, tell user to `/reload` existing Pi panes or restart them
 

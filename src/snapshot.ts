@@ -1,7 +1,7 @@
 import { SwitcherSnapshot } from './model.js';
 import { CommandRunner, hasTmuxServer, nodeCommandRunner } from './tmux.js';
 import { sendDaemonRequest } from './ipc.js';
-import { discoverUnhookedPanes, mergeDaemonAndDiscovered } from './discovery.js';
+import { discoverUnintegratedPanes, mergeDaemonAndDiscovered } from './discovery.js';
 import { deriveStalledStatuses, StallTracker } from './stalled.js';
 import { normalizeAgentPaneTarget } from './terminalTarget.js';
 
@@ -29,9 +29,9 @@ export async function loadSwitcherSnapshot(options: SnapshotOptions = {}): Promi
     // No daemon yet; render an honest empty state instead of faceplanting like a fragile dashboard goblin.
   }
 
-  const discovery = await discoverUnhookedPanes(runner, now);
+  const discovery = await discoverUnintegratedPanes(runner, now);
   if (discovery.tmuxAvailable) {
-    const panes = mergeDaemonAndDiscovered(daemonSnapshot?.panes ?? [], discovery.panes, discovery.paneIds);
+    const panes = mergeDaemonAndDiscovered(daemonSnapshot?.panes ?? [], discovery.panes, discovery.paneIds, true);
     return {
       panes: await deriveStalledStatuses(panes, { now, runner, tracker: options.stallTracker, stalledMs: options.stalledMs }),
       daemonAvailable: daemonSnapshot?.daemonAvailable ?? false,

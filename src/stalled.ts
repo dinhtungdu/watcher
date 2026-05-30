@@ -7,7 +7,7 @@ export const DEFAULT_STALLED_MS = 5 * 60 * 1000;
 
 export interface StallEntry {
   lastActivityAt: number;
-  hookUpdatedAt: number;
+  eventUpdatedAt: number;
   outputHash?: string;
   title?: string;
 }
@@ -56,7 +56,7 @@ export async function deriveStalledStatuses(panes: AgentPane[], options: Stalled
       if (pane.status === 'idle') tracker.entries.delete(pane.id);
       else tracker.entries.set(pane.id, {
         lastActivityAt: pane.updatedAt,
-        hookUpdatedAt: pane.updatedAt,
+        eventUpdatedAt: pane.updatedAt,
         outputHash: pane.outputHash,
         title: observedTitle(pane),
       });
@@ -69,16 +69,16 @@ export async function deriveStalledStatuses(panes: AgentPane[], options: Stalled
     const previous = tracker.entries.get(pane.id);
     let entry: StallEntry = previous ?? {
       lastActivityAt: pane.updatedAt,
-      hookUpdatedAt: pane.updatedAt,
+      eventUpdatedAt: pane.updatedAt,
       outputHash,
       title,
     };
 
-    const hookChanged = pane.updatedAt > entry.hookUpdatedAt;
+    const eventChanged = pane.updatedAt > entry.eventUpdatedAt;
     const outputChanged = outputHash !== undefined && entry.outputHash !== undefined && outputHash !== entry.outputHash;
     const titleChanged = title !== undefined && entry.title !== undefined && title !== entry.title;
-    if (hookChanged) {
-      entry = { lastActivityAt: pane.updatedAt, hookUpdatedAt: pane.updatedAt, outputHash, title };
+    if (eventChanged) {
+      entry = { lastActivityAt: pane.updatedAt, eventUpdatedAt: pane.updatedAt, outputHash, title };
     } else if (outputChanged || titleChanged) {
       entry = { ...entry, lastActivityAt: now, outputHash, title };
     } else {

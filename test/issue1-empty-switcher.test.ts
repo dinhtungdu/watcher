@@ -33,7 +33,7 @@ test('empty switcher explains daemon snapshot absence when tmux exists', async (
   const frame = renderSwitcherFrame(snapshot, 90, 18, { useColor: false });
   const text = frame.join('\n');
   assert.match(text, /No Watcher Daemon snapshot is available yet/);
-  assert.match(text, /Run watcher daemon or install hooks/);
+  assert.match(text, /Run watcher daemon or install integrations/);
 });
 
 test('empty switcher renders at least terminal-sized frame', () => {

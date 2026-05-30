@@ -162,8 +162,8 @@ function emptyLines(snapshot: SwitcherSnapshot, width: number, height: number, u
   const help = !snapshot.tmuxAvailable
     ? 'Start tmux and run agent panes there; Watcher is local-tmux only.'
     : !snapshot.daemonAvailable
-      ? 'Run watcher daemon or install hooks; unhooked discovery arrives in the full switcher.'
-      : 'Start pi, claude, codex, or aider in a tmux pane and try again.';
+      ? 'Run watcher daemon or install integrations; unintegrated discovery arrives in the full switcher.'
+      : 'Start pi, claude, codex, opencode, or aider in a tmux pane and try again.';
   const body = [
     '',
     bold('Nothing to activate', useColor),
@@ -302,7 +302,7 @@ function detailContent(pane: AgentPane, now: number, home: string | undefined, w
   const messageWidth = Math.max(12, width - 4);
   const fallbackDiscovered = pane.currentAction === DISCOVERY_FALLBACK_ACTION;
   const taskLines = showSummary && !fallbackDiscovered ? wrapText(summary, messageWidth, 4).map((value) => `${bold('▸', useColor)} ${value}`) : [];
-  const activityLines = pane.status === 'working'
+  const activityLines = (pane.status === 'working' || pane.status === 'needs_input')
     ? (pane.activityItems ?? []).flatMap((item) => {
       const marker = item.kind === 'tool' ? '⚙' : '▌';
       const state = item.state && item.kind === 'tool' ? ` ${item.state}` : '';
@@ -324,7 +324,7 @@ function detailContent(pane: AgentPane, now: number, home: string | undefined, w
   return spacedSections([
     detailSection('Status', [
       `${statusDot(pane.status, useColor, now)} ${pane.agentType} · ${pane.status} · updated ${formatAge(ageSeconds(pane, now))} ago`,
-      fallbackDiscovered ? 'discovered by tmux process scan; install hooks for rich status' : undefined,
+      fallbackDiscovered ? 'discovered by tmux process scan; no integration events received yet' : undefined,
       pane.reportedStatus && pane.reportedStatus !== pane.status ? `reported  ${pane.reportedStatus}` : undefined,
     ], useColor),
     detailSection('User message', taskLines, useColor),
@@ -378,7 +378,7 @@ function helpLines(width: number, layout: LayoutMode, selectedPane: AgentPane | 
   const group = paneGroup(selectedPane, home);
   const label = group.isGit ? `${group.repoTitle} · ${group.branch} · ${shortPath(group.path, home)}` : `${shortPath(group.path, home)}`;
   const mode = stateModeLabel(layout);
-  const selectedState = `${selectedPane.id} ${tmuxTarget(selectedPane)} · ${selectedPane.agentType} · ${selectedPane.status} · ${label} · ${mode}`;
+  const selectedState = `${tmuxTarget(selectedPane)} · ${selectedPane.agentType} · ${selectedPane.status} · ${label} · ${mode}`;
   return [
     fit(dim(line(width), useColor), width, useColor),
     fit(`${bold('selected', useColor)} ${selectedState}`, width, useColor),

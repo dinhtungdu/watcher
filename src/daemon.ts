@@ -1,48 +1,34 @@
 import net from 'node:net';
 import fs from 'node:fs/promises';
-import { AgentActivityItem, AgentPane, SwitcherSnapshot } from './model.js';
-import { normalizeHookEvent, HookEventInput } from './events.js';
+import { AgentPane, SwitcherSnapshot } from './model.js';
+import { WatcherAgentEventInput } from './agentEvents.js';
+import { applyAgentEvent } from './agentEventReducer.js';
 import { CommandRunner, hasTmuxServer, nodeCommandRunner } from './tmux.js';
+import { getTmuxPane } from './tmuxContext.js';
+import { terminalTargetCwd } from './terminalTarget.js';
+import { discoverGitMetadata } from './git.js';
+import { canonicalSurfaceKey } from './surfaceIdentity.js';
 
 export type DaemonRequest =
-  | { type: 'hook'; event: HookEventInput }
+  | { type: 'event'; event: WatcherAgentEventInput }
   | { type: 'snapshot' };
 
 export type DaemonResponse =
   | { ok: true; snapshot?: SwitcherSnapshot }
   | { ok: false; error: string };
 
-function mergeActivityItems(previous: AgentPane | undefined, pane: AgentPane): AgentActivityItem[] | undefined {
-  if (pane.status === 'idle') return undefined;
-  if (!pane.activityItems?.length) return previous?.activityItems;
-  const byId = new Map<string, AgentActivityItem>();
-  for (const item of previous?.activityItems ?? []) byId.set(item.id, item);
-  for (const item of pane.activityItems) byId.set(item.id, item);
-  return [...byId.values()].sort((a, b) => a.updatedAt - b.updatedAt).slice(-2);
-}
-
-function mergePaneEvent(previous: AgentPane | undefined, pane: AgentPane): AgentPane {
-  const userMessage = pane.userMessage ?? previous?.userMessage;
-  const incomingHasUserTask = Boolean(pane.userMessage?.trim());
-  const preservePreviousTask = Boolean(previous?.summary && !incomingHasUserTask);
-  return {
-    ...previous,
-    ...pane,
-    userMessage,
-    summary: preservePreviousTask ? previous!.summary : pane.summary,
-    activityItems: mergeActivityItems(previous, pane),
-  };
-}
-
 export class SnapshotStore {
   private panes = new Map<string, AgentPane>();
 
-  async recordHookEvent(event: HookEventInput, runner: CommandRunner = nodeCommandRunner): Promise<AgentPane> {
-    const pane = await normalizeHookEvent(event, runner);
-    const previous = this.panes.get(pane.id);
-    const merged = mergePaneEvent(previous, pane);
-    this.panes.set(pane.id, merged);
-    return merged;
+  async recordAgentEvent(event: WatcherAgentEventInput, runner: CommandRunner = nodeCommandRunner): Promise<AgentPane> {
+    const target = await getTmuxPane(event.surface.id, runner);
+    const cwd = event.payload.cwd ?? terminalTargetCwd(target);
+    const git = await discoverGitMetadata(cwd, runner);
+    const key = canonicalSurfaceKey(event.surface);
+    const previous = this.panes.get(key);
+    const pane = applyAgentEvent(previous, event, { target, cwd, git, now: event.now ?? Date.now() });
+    this.panes.set(pane.id, pane);
+    return pane;
   }
 
   snapshot(tmuxAvailable = true, now = Date.now()): SwitcherSnapshot {
@@ -100,8 +86,8 @@ export async function startDaemon(options: DaemonOptions): Promise<net.Server> {
 async function handleRequest(body: string, store: SnapshotStore, runner: CommandRunner): Promise<DaemonResponse> {
   try {
     const request = JSON.parse(body) as DaemonRequest;
-    if (request.type === 'hook') {
-      await store.recordHookEvent(request.event, runner);
+    if (request.type === 'event') {
+      await store.recordAgentEvent(request.event, runner);
       return { ok: true };
     }
     if (request.type === 'snapshot') {

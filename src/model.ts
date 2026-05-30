@@ -1,5 +1,7 @@
 export type AgentStatus = 'working' | 'needs_input' | 'stalled' | 'unknown' | 'idle';
 
+export type AgentType = 'pi' | 'claude' | 'codex' | 'opencode' | 'aider';
+
 export type TerminalBackend = 'tmux';
 
 export interface BaseTerminalTarget {
@@ -37,19 +39,28 @@ export interface AgentActivityItem {
   kind: 'assistant' | 'tool';
   label: string;
   text?: string;
-  state?: 'running' | 'done' | 'error';
+  state?: 'running' | 'done' | 'error' | 'waiting';
   updatedAt: number;
+}
+
+export interface ObservationCapability {
+  source: 'event-source' | 'terminal' | 'mixed';
+  semanticEvents: boolean;
+  assistantDeltas: boolean;
+  terminalPreview: boolean;
 }
 
 export interface AgentPane {
   id: string;
-  agentType: string;
+  agentType: AgentType;
   status: AgentStatus;
   summary: string;
   userMessage?: string;
   currentAction?: string;
   lastMessage?: string;
+  pendingAssistantMessage?: string;
   activityItems?: AgentActivityItem[];
+  observation?: ObservationCapability;
   target: TerminalTarget;
   cwd?: string;
   git?: GitMetadata;

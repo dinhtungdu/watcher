@@ -23,4 +23,4 @@ Controls:
 - `1`, `2`, `3`: force narrow, medium, wide layouts
 - `q`: quit
 
-All Status Hook data, tmux targets, actions, messages, and project paths are fake.
+All Agent Event Source data, tmux targets, actions, messages, and project paths are fake.

@@ -1,4 +1,5 @@
 import { AgentPane, TerminalTarget, TmuxTarget } from './model.js';
+import { canonicalSurfaceKey, surfaceFromTarget } from './surfaceIdentity.js';
 
 export function terminalTargetId(target: TerminalTarget): string {
   return target.id;
@@ -41,10 +42,14 @@ export function tmuxTarget(fields: Omit<TmuxTarget, 'backend' | 'id'> & { id?: s
 
 type LegacyAgentPane = Omit<AgentPane, 'target'> & { target?: TerminalTarget; tmux?: TmuxTarget };
 
+function paneWithCanonicalTarget(pane: AgentPane | LegacyAgentPane, target: TerminalTarget): AgentPane {
+  return { ...pane, id: canonicalSurfaceKey(surfaceFromTarget(target)), target } as AgentPane;
+}
+
 export function normalizeAgentPaneTarget(pane: AgentPane | LegacyAgentPane): AgentPane | undefined {
   const candidate = pane as LegacyAgentPane;
-  if (candidate.target) return candidate as AgentPane;
-  if (candidate.tmux) return { ...candidate, target: tmuxTarget(candidate.tmux) } as AgentPane;
+  if (candidate.target) return paneWithCanonicalTarget(candidate, candidate.target);
+  if (candidate.tmux) return paneWithCanonicalTarget(candidate, tmuxTarget(candidate.tmux));
   return undefined;
 }
 

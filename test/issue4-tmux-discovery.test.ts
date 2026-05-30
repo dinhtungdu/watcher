@@ -1,9 +1,10 @@
 import { test } from 'bun:test';
 import assert from 'node:assert/strict';
 import { CommandRunner } from '../src/tmux.js';
-import { discoverUnhookedPanes, mergeDaemonAndDiscovered } from '../src/discovery.js';
+import { discoverUnintegratedPanes, mergeDaemonAndDiscovered } from '../src/discovery.js';
 import { renderSwitcherFrame } from '../src/switcherLayout.js';
 import { AgentPane } from '../src/model.js';
+import { tmuxTarget } from '../src/terminalTarget.js';
 
 function discoveryRunner(): CommandRunner {
   return {
@@ -15,6 +16,7 @@ function discoveryRunner(): CommandRunner {
             '%2\twatcher\t0\t1\t/Users/tung/work/watcher-feature\t102\tzsh\ttwo',
             '%3\tlab\t2\t0\t/Users/tung/tmp/spike\t103\tbash\tthree',
             '%4\tshell\t1\t0\t/Users/tung\t104\tzsh\tfour',
+            '%5\topen\t0\t0\t/Users/tung/work/opencode\t105\topencode\tfive',
           ].join('\n') + '\n',
           stderr: '',
         };
@@ -42,51 +44,67 @@ function discoveryRunner(): CommandRunner {
 }
 
 test('tmux discovery detects direct and one-level child agent processes', async () => {
-  const result = await discoverUnhookedPanes(discoveryRunner(), 1_700_000_000_000);
+  const result = await discoverUnintegratedPanes(discoveryRunner(), 1_700_000_000_000);
   assert.equal(result.tmuxAvailable, true);
   assert.deepEqual(result.panes.map((pane) => [pane.id, pane.agentType, pane.status]), [
-    ['%1', 'pi', 'unknown'],
-    ['%2', 'claude', 'unknown'],
-    ['%3', 'aider', 'unknown'],
+    ['tmux:%1', 'pi', 'unknown'],
+    ['tmux:%2', 'claude', 'unknown'],
+    ['tmux:%3', 'aider', 'unknown'],
+    ['tmux:%5', 'opencode', 'unknown'],
   ]);
-  assert.equal(result.panes.some((pane) => pane.id === '%4'), false);
+  assert.equal(result.panes.some((pane) => pane.id === 'tmux:%4'), false);
 });
 
 test('discovered panes carry grouping metadata and path fallback', async () => {
-  const result = await discoverUnhookedPanes(discoveryRunner(), 1_700_000_000_000);
+  const result = await discoverUnintegratedPanes(discoveryRunner(), 1_700_000_000_000);
   const frame = renderSwitcherFrame({ panes: result.panes, daemonAvailable: false, tmuxAvailable: true, now: 1_700_000_010_000 }, 120, 24, { useColor: false, home: '/Users/tung' }).join('\n');
   assert.match(frame, /watcher/);
   assert.match(frame, /main ~\/work\/watcher/);
   assert.match(frame, /feature\/tui ~\/work\/watcher-feature/);
   assert.match(frame, /Path fallback/);
   assert.match(frame, /~\/tmp\/spike/);
-  assert.match(frame, /● pi\s+Detected pi process/);
+  assert.match(frame, /● pi\s+Waiting for first Watcher event/);
   assert.match(frame, /● claude\s+Detected claude process/);
   assert.match(frame, /● aider\s+Detected aider process/);
+  assert.match(frame, /Detected opencode process/);
 });
 
-test('merge hides daemon ghost panes and keeps hooked status over discovery', async () => {
-  const result = await discoverUnhookedPanes(discoveryRunner(), 1_700_000_000_000);
-  const hooked: AgentPane = {
-    id: '%1',
+test('merge hides daemon ghost panes and keeps event-source status over discovery', async () => {
+  const result = await discoverUnintegratedPanes(discoveryRunner(), 1_700_000_000_000);
+  const eventSourced: AgentPane = {
+    id: 'tmux:%1',
     agentType: 'pi',
     status: 'working',
-    summary: 'Hook status wins',
+    summary: 'Event source status wins',
     target: result.panes[0]!.target,
     cwd: result.panes[0]!.cwd,
     git: result.panes[0]!.git,
     updatedAt: 1_700_000_005_000,
   };
-  const ghost: AgentPane = { ...hooked, id: '%99', summary: 'Ghost pane' };
-  const merged = mergeDaemonAndDiscovered([hooked, ghost], result.panes, result.paneIds);
-  assert.equal(merged.some((pane) => pane.id === '%99'), false);
-  assert.equal(merged.find((pane) => pane.id === '%1')?.summary, 'Hook status wins');
-  assert.equal(merged.find((pane) => pane.id === '%1')?.status, 'working');
+  const ghost: AgentPane = { ...eventSourced, id: 'tmux:%99', target: tmuxTarget({ paneId: '%99' }), summary: 'Ghost pane' };
+  const merged = mergeDaemonAndDiscovered([eventSourced, ghost], result.panes, result.paneIds, true);
+  assert.equal(merged.some((pane) => pane.id === 'tmux:%99'), false);
+  assert.equal(merged.find((pane) => pane.id === 'tmux:%1')?.summary, 'Event source status wins');
+  assert.equal(merged.find((pane) => pane.id === 'tmux:%1')?.status, 'working');
 });
 
-test('merge tolerates legacy daemon panes that still use tmux field', async () => {
-  const result = await discoverUnhookedPanes(discoveryRunner(), 1_700_000_000_000);
-  const legacyHooked = {
+test('merge keeps daemon panes when tmux is unavailable but drops ghosts when tmux is available', async () => {
+  const result = await discoverUnintegratedPanes(discoveryRunner(), 1_700_000_000_000);
+  const stale: AgentPane = {
+    id: 'tmux:%99',
+    agentType: 'pi',
+    status: 'working',
+    summary: 'Keep only when tmux unavailable',
+    target: tmuxTarget({ paneId: '%99' }),
+    updatedAt: 1_700_000_005_000,
+  };
+  assert.equal(mergeDaemonAndDiscovered([stale], [], new Set(), false).some((pane) => pane.id === 'tmux:%99'), true);
+  assert.equal(mergeDaemonAndDiscovered([stale], result.panes, result.paneIds, true).some((pane) => pane.id === 'tmux:%99'), false);
+});
+
+test('merge tolerates legacy daemon panes that still use tmux field or backend-local ids', async () => {
+  const result = await discoverUnintegratedPanes(discoveryRunner(), 1_700_000_000_000);
+  const legacyEventPane = {
     id: '%1',
     agentType: 'pi',
     status: 'working',
@@ -96,7 +114,8 @@ test('merge tolerates legacy daemon panes that still use tmux field', async () =
     git: result.panes[0]!.git,
     updatedAt: 1_700_000_005_000,
   } as unknown as AgentPane;
-  const merged = mergeDaemonAndDiscovered([legacyHooked], result.panes, result.paneIds);
+  const merged = mergeDaemonAndDiscovered([legacyEventPane], result.panes, result.paneIds, true);
+  assert.equal(merged[0]!.id, 'tmux:%1');
   assert.equal(merged[0]!.target.paneId, '%1');
   const frame = renderSwitcherFrame({ panes: merged, daemonAvailable: true, tmuxAvailable: true, now: 1_700_000_010_000 }, 120, 24, { useColor: false, home: '/Users/tung' }).join('\n');
   assert.match(frame, /Legacy daemon snapshot/);

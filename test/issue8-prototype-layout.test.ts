@@ -122,8 +122,8 @@ test('details pane leaves breathing room between sections', () => {
 });
 
 test('discovery fallback wording stays out of user and assistant message sections', () => {
-  const frame = renderSwitcherFrame({ panes: [pane({ id: '%9', status: 'unknown', summary: 'Detected pi process without Watcher hook status', currentAction: 'tmux/process discovery fallback' })], daemonAvailable: false, tmuxAvailable: true, now }, 130, 22, { useColor: false, selectedPaneId: '%9' }).join('\n');
-  assert.match(frame, /discovered by tmux process scan; install hooks for rich stat/);
+  const frame = renderSwitcherFrame({ panes: [pane({ id: '%9', status: 'unknown', summary: 'Detected pi process without Watcher integration events', currentAction: 'tmux/process discovery fallback' })], daemonAvailable: false, tmuxAvailable: true, now }, 130, 22, { useColor: false, selectedPaneId: '%9' }).join('\n');
+  assert.match(frame, /discovered by tmux process scan; no integration events/);
   assert.doesNotMatch(frame, /User message[\s\S]*tmux\/process discovery fallback/);
   assert.doesNotMatch(frame, /Assistant[\s\S]*tmux\/process discovery fallback/);
 });
@@ -132,9 +132,9 @@ test('medium and narrow layouts collapse to list-first selected summary', () => 
   const medium = renderSwitcherFrame({ panes, daemonAvailable: true, tmuxAvailable: true, now }, 90, 18, { useColor: false, home: '/Users/tung', selectedPaneId: '%2' }).join('\n');
   const narrow = renderSwitcherFrame({ panes, daemonAvailable: true, tmuxAvailable: true, now }, 60, 18, { useColor: false, home: '/Users/tung', selectedPaneId: '%2' }).join('\n');
   assert.doesNotMatch(medium, /details/);
-  assert.match(medium, /selected %2 s:1\.1 \(%2\) · pi · needs_input/);
+  assert.match(medium, /selected s:1\.1 \(%2\) · pi · needs_input/);
   assert.doesNotMatch(narrow, /details/);
-  assert.match(narrow, /selected %2 s:1\.1 \(%2\) · pi · needs_input/);
+  assert.match(narrow, /selected s:1\.1 \(%2\) · pi · needs_input/);
 });
 
 test('keyboard selection helper supports j/k style movement over rows only', () => {

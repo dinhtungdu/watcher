@@ -30,7 +30,7 @@ function captureRunner(outputs: Record<string, string>): CommandRunner {
   };
 }
 
-test('working pane becomes stalled after five minutes with no hook/title/output change', async () => {
+test('working pane becomes stalled after five minutes with no event/title/output change', async () => {
   const tracker = createStallTracker();
   const runner = captureRunner({ '%1': 'same output' });
   const first = await deriveStalledStatuses([pane('%1', 'working', 1_000, 'Long build')], { now: 1_000, runner, tracker });
@@ -51,7 +51,7 @@ test('new output clears stalled back to the reported working status', async () =
   assert.equal(cleared[0]!.status, 'working');
 });
 
-test('new hook event clears stalled back to working', async () => {
+test('new Watcher Agent Event clears stalled back to working', async () => {
   const tracker = createStallTracker();
   const runner = captureRunner({ '%1': 'same output' });
   await deriveStalledStatuses([pane('%1', 'working', 1_000, 'Build')], { now: 1_000, runner, tracker });

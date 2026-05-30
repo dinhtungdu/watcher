@@ -5,13 +5,13 @@ import { renderSwitcherFrame } from './switcherLayout.js';
 import { stripAnsi } from './text.js';
 import { startDaemon } from './daemon.js';
 import { defaultSocketPath } from './ipc.js';
-import { runHookCommand } from './hook.js';
-import { runHooksInstall, runHooksStatus } from './hooksInstaller.js';
+import { runEventCommand } from './eventCommand.js';
+import { runIntegrationsInstall, runIntegrationsStatus } from './integrationsInstaller.js';
 
 export async function main(argv = process.argv.slice(2)): Promise<number> {
   const [command, ...rest] = argv;
   if (command === 'help' || command === '--help' || command === '-h') {
-    process.stdout.write('watcher - open the Watcher Agent Switcher\n\nCommands:\n  watcher\n  watcher daemon\n  watcher hook <agent> <event>\n  watcher hooks install [agents...]\n  watcher hooks status\n');
+    process.stdout.write('watcher - open the Watcher Agent Switcher\n\nCommands:\n  watcher\n  watcher daemon\n  watcher event [--quiet] <agent> <event>\n  watcher integrations install <agents...>\n  watcher integrations status\n');
     return 0;
   }
   if (command === 'daemon') {
@@ -25,14 +25,14 @@ export async function main(argv = process.argv.slice(2)): Promise<number> {
     });
     return 0;
   }
-  if (command === 'hook') {
-    return runHookCommand(rest);
+  if (command === 'event') {
+    return runEventCommand(rest);
   }
-  if (command === 'hooks') {
+  if (command === 'integrations') {
     const [subcommand, ...agents] = rest;
     if (subcommand === 'install') {
       try {
-        const result = await runHooksInstall(agents);
+        const result = await runIntegrationsInstall(agents);
         process.stdout.write(result.output);
         return result.code;
       } catch (error) {
@@ -41,10 +41,10 @@ export async function main(argv = process.argv.slice(2)): Promise<number> {
       }
     }
     if (subcommand === 'status') {
-      process.stdout.write(await runHooksStatus());
+      process.stdout.write(await runIntegrationsStatus());
       return 0;
     }
-    process.stderr.write('Usage: watcher hooks install [agents...] | watcher hooks status\n');
+    process.stderr.write('Usage: watcher integrations install <agents...> | watcher integrations status\n');
     return 2;
   }
   if (command) {
