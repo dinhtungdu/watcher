@@ -97,6 +97,10 @@ export default function watcherAgentEventSource(pi: ExtensionAPI) {
     report("user-message", { text: event.prompt, cwd: ctx.cwd });
   });
 
+  pi.on("agent_start", async (_event, ctx) => {
+    report("agent-started", { cwd: ctx.cwd });
+  });
+
   pi.on("message_end", async (event, ctx) => {
     const text = assistantMessageText(event.message);
     if (text) report("assistant-message", { text, cwd: ctx.cwd });

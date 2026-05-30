@@ -13,6 +13,8 @@ export function mapAgentEventToStatus(type: WatcherAgentEventInput['type']): Age
   switch (type) {
     case 'session-started':
       return 'unknown';
+    case 'agent-started':
+      return 'working';
     case 'user-message':
     case 'assistant-delta':
     case 'assistant-message':
@@ -123,7 +125,7 @@ export function applyAgentEvent(previous: AgentPane | undefined, input: WatcherA
         currentAction: undefined,
       };
     }
-    if (input.type !== 'session-started' && input.type !== 'user-message' && input.type !== 'needs-input' && input.type !== 'error') {
+    if (input.type !== 'session-started' && input.type !== 'agent-started' && input.type !== 'user-message' && input.type !== 'needs-input' && input.type !== 'error') {
       return {
         ...pane,
         status: 'idle',
@@ -148,6 +150,17 @@ export function applyAgentEvent(previous: AgentPane | undefined, input: WatcherA
         pendingAssistantMessage: undefined,
         activityItems: undefined,
         currentAction: undefined,
+      };
+
+    case 'agent-started':
+      return {
+        ...pane,
+        summary: previous?.summary ?? 'Working',
+        userMessage: previous?.userMessage,
+        lastMessage: undefined,
+        pendingAssistantMessage: undefined,
+        activityItems: undefined,
+        currentAction: 'Working',
       };
 
     case 'user-message': {

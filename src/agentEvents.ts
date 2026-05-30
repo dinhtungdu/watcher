@@ -7,6 +7,7 @@ export const MAX_EVENT_TEXT = 16_000;
 
 export const WATCHER_AGENT_EVENT_TYPES = [
   'session-started',
+  'agent-started',
   'user-message',
   'assistant-delta',
   'assistant-message',
@@ -130,6 +131,8 @@ export function normalizeWatcherAgentEventPayload(type: WatcherAgentEventType, p
   switch (type) {
     case 'session-started':
       return { ...common, reason: optionalString(payload, 'reason') };
+    case 'agent-started':
+      return common;
     case 'user-message':
       return { ...common, text: requireString(payload, 'text') };
     case 'assistant-delta':

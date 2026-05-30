@@ -91,6 +91,18 @@ test('late assistant event after completion does not resurrect pane as working',
   assert.equal(pane.lastMessage, 'Actually the last message arrived late');
 });
 
+test('Pi agent_start is the authoritative transition from idle back to working', async () => {
+  const store = new SnapshotStore();
+  await store.recordAgentEvent(piEvent('user-message', { text: 'First task' }, 1_700_000_000_000), fixtureRunner());
+  await store.recordAgentEvent(piEvent('agent-finished', { finalMessage: 'Done' }, 1_700_000_010_000), fixtureRunner());
+  await store.recordAgentEvent(piEvent('agent-started', {}, 1_700_000_020_000), fixtureRunner());
+  const pane = store.snapshot(true, 1_700_000_020_000).panes[0]!;
+  assert.equal(pane.status, 'working');
+  assert.equal(pane.summary, 'First task');
+  assert.equal(pane.lastMessage, undefined);
+  assert.equal(pane.currentAction, 'Working');
+});
+
 test('working pane can show latest assistant narration below the user task as activity', async () => {
   const store = new SnapshotStore();
   await store.recordAgentEvent(piEvent('user-message', { text: 'Refactor the detail pane' }, 1_700_000_000_000), fixtureRunner());

@@ -31,6 +31,8 @@ test('watcher integrations install pi writes managed Pi extension and reload gui
   assert.match(content, /report\("session-started"/);
   assert.match(content, /pi\.on\("before_agent_start"/);
   assert.match(content, /report\("user-message", \{ text: event\.prompt/);
+  assert.match(content, /pi\.on\("agent_start"/);
+  assert.match(content, /report\("agent-started"/);
   assert.match(content, /pi\.on\("message_end"/);
   assert.match(content, /report\("assistant-message", \{ text/);
   assert.match(content, /pi\.on\("tool_execution_start"/);
