@@ -287,6 +287,7 @@ function detailContent(pane: AgentPane, now: number, home: string | undefined, w
   const lastMessage = singleLine(pane.lastMessage ?? '').trim();
   const showSummary = summary && !isDuplicateDetailText(summary, lastMessage ? [lastMessage] : []);
   const messageWidth = Math.max(12, width - 4);
+  const taskLines = showSummary ? wrapText(summary, messageWidth, 4).map((value) => `${bold('▸', useColor)} ${value}`) : [];
   const messageLines = wrapText(lastMessage, messageWidth, 5).map((value) => `${bold('▌', useColor)} ${value}`);
   const command = terminalTargetCommand(pane.target);
   const pid = terminalTargetPid(pane.target);
@@ -296,7 +297,7 @@ function detailContent(pane: AgentPane, now: number, home: string | undefined, w
       pane.reportedStatus && pane.reportedStatus !== pane.status ? `reported  ${pane.reportedStatus}` : undefined,
     ], useColor),
     '',
-    ...detailSection('Task', [showSummary ? summary : undefined, labelledLine('action', pane.currentAction)], useColor),
+    ...detailSection('Task', [...taskLines, labelledLine('action', pane.currentAction)], useColor),
     '',
     ...detailSection('Last message', messageLines, useColor),
     '',

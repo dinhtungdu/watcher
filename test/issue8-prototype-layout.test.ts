@@ -101,6 +101,14 @@ test('details pane does not repeat truncated summary and full last message', () 
   assert.equal(frame.match(/This is a very long assistant final answer/g)?.length, 1);
 });
 
+test('details pane wraps and marks task text separately from assistant message', () => {
+  const longTask = 'Implement the detail pane so the user prompt wraps across multiple lines and is visually distinct from the assistant response.';
+  const frame = renderSwitcherFrame({ panes: [pane({ id: '%9', status: 'needs_input', summary: longTask, lastMessage: 'Please approve the layout.' })], daemonAvailable: true, tmuxAvailable: true, now }, 130, 22, { useColor: false, selectedPaneId: '%9' }).join('\n');
+  assert.match(frame, /Task/);
+  assert.match(frame, /▸ Implement the detail pane/);
+  assert.match(frame, /▌ Please approve the layout\./);
+});
+
 test('medium and narrow layouts collapse to list-first selected summary', () => {
   const medium = renderSwitcherFrame({ panes, daemonAvailable: true, tmuxAvailable: true, now }, 90, 18, { useColor: false, home: '/Users/tung', selectedPaneId: '%2' }).join('\n');
   const narrow = renderSwitcherFrame({ panes, daemonAvailable: true, tmuxAvailable: true, now }, 60, 18, { useColor: false, home: '/Users/tung', selectedPaneId: '%2' }).join('\n');
