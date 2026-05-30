@@ -360,7 +360,7 @@ function boxed(title: string, content: string[], width: number, height: number, 
 
 function renderWide(groups: RepoGroup[], width: number, height: number, layout: LayoutMode, state: SwitcherRenderState, selectedPaneId: string, now: number): string[] {
   const useColor = state.useColor ?? false;
-  const rightWidth = Math.min(72, Math.max(56, Math.floor(width * 0.52)));
+  const rightWidth = Math.max(56, Math.floor((width - 3) / 2));
   const leftWidth = width - rightWidth - 3;
   const left = pagedList(groups, leftWidth, height, layout, state, selectedPaneId);
   const pane = selectablePanes(groups).find((candidate) => candidate.id === selectedPaneId) ?? selectablePanes(groups)[0]!;

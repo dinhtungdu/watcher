@@ -51,7 +51,8 @@ test('selected row uses full-width reverse highlight without hardcoded color', (
 });
 
 test('wide layout has rich right detail pane', () => {
-  const frame = renderSwitcherFrame({ panes, daemonAvailable: true, tmuxAvailable: true, now }, 130, 24, { useColor: false, home: '/Users/tung', selectedPaneId: '%2' }).join('\n');
+  const frameLines = renderSwitcherFrame({ panes, daemonAvailable: true, tmuxAvailable: true, now }, 130, 24, { useColor: false, home: '/Users/tung', selectedPaneId: '%2' });
+  const frame = frameLines.join('\n');
   assert.match(frame, /details/);
   assert.match(frame, /● pi · needs_input · updated 5s ago/);
   assert.match(frame, /repo\s+watcher/);
@@ -62,6 +63,9 @@ test('wide layout has rich right detail pane', () => {
   assert.match(frame, /Please pick one\./);
   assert.match(frame, /s:1\.1 \(%2\)/);
   assert.match(frame, /needs_input · updated 5s ago/);
+  const firstBodyLine = frameLines.find((line) => line.includes('│ ┌ details')) ?? '';
+  const [left, right] = firstBodyLine.split('│');
+  assert.ok(Math.abs((left?.length ?? 0) - (right?.length ?? 0)) <= 8);
 });
 
 test('renderer never emits embedded newlines from pane text', () => {
@@ -119,7 +123,7 @@ test('details pane leaves breathing room between sections', () => {
 
 test('discovery fallback wording stays out of user and assistant message sections', () => {
   const frame = renderSwitcherFrame({ panes: [pane({ id: '%9', status: 'unknown', summary: 'Detected pi process without Watcher hook status', currentAction: 'tmux/process discovery fallback' })], daemonAvailable: false, tmuxAvailable: true, now }, 130, 22, { useColor: false, selectedPaneId: '%9' }).join('\n');
-  assert.match(frame, /discovered by tmux process scan; install hooks for rich status/);
+  assert.match(frame, /discovered by tmux process scan; install hooks for rich stat/);
   assert.doesNotMatch(frame, /User message[\s\S]*tmux\/process discovery fallback/);
   assert.doesNotMatch(frame, /Assistant[\s\S]*tmux\/process discovery fallback/);
 });
