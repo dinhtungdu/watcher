@@ -325,7 +325,7 @@ function detailContent(pane: AgentPane, now: number, home: string | undefined, w
   const assistantValues = fallbackDiscovered ? [lastMessage] : activityLines.length > 0 ? [] : [lastMessage, pane.currentAction];
   const assistantLines = uniqueDetailText(assistantValues)
     .flatMap((value) => wrapText(value, messageWidth, 5).map((line) => `${bold('▌', useColor)} ${line}`));
-  const terminalPreviewLines = previewLines(pane.terminalPreview, messageWidth, 6);
+  const terminalPreviewLines = previewLines(pane.terminalPreview, messageWidth, 12);
   const command = terminalTargetCommand(pane.target);
   const pid = terminalTargetPid(pane.target);
   const cwd = pane.cwd ? shortPath(pane.cwd, home) : undefined;
