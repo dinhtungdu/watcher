@@ -14,3 +14,5 @@ Tmux binding example:
 ```tmux
 bind -n M-s new-window -n watcher "watcher"
 ```
+
+This keeps Watcher one keystroke away: `Alt-s` opens the switcher in a tmux window, `j/k` picks an agent, and `Enter` jumps to it.
