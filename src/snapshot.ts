@@ -2,6 +2,7 @@ import { SwitcherSnapshot } from './model.js';
 import { CommandRunner, hasTmuxServer, nodeCommandRunner } from './tmux.js';
 import { sendDaemonRequest } from './ipc.js';
 import { discoverUnintegratedPanes, mergeDaemonAndDiscovered } from './discovery.js';
+import { captureTmuxPanePreview } from './tmuxContext.js';
 import { deriveStalledStatuses, StallTracker } from './stalled.js';
 import { normalizeAgentPaneTarget } from './terminalTarget.js';
 
@@ -11,6 +12,24 @@ export interface SnapshotOptions {
   stallTracker?: StallTracker;
   stalledMs?: number;
   socketPath?: string;
+}
+
+async function attachTerminalPreviews(panes: SwitcherSnapshot['panes'], runner: CommandRunner): Promise<SwitcherSnapshot['panes']> {
+  return Promise.all(panes.map(async (pane) => {
+    if (pane.terminalPreview || pane.target.backend !== 'tmux') return pane;
+    const terminalPreview = await captureTmuxPanePreview(pane.target.paneId, runner);
+    if (!terminalPreview) return pane;
+    return {
+      ...pane,
+      terminalPreview,
+      observation: {
+        source: pane.observation?.source ?? 'mixed',
+        semanticEvents: pane.observation?.semanticEvents ?? true,
+        assistantDeltas: pane.observation?.assistantDeltas ?? false,
+        terminalPreview: true,
+      },
+    };
+  }));
 }
 
 export async function loadSwitcherSnapshot(options: SnapshotOptions = {}): Promise<SwitcherSnapshot> {
@@ -31,7 +50,7 @@ export async function loadSwitcherSnapshot(options: SnapshotOptions = {}): Promi
 
   const discovery = await discoverUnintegratedPanes(runner, now);
   if (discovery.tmuxAvailable) {
-    const panes = mergeDaemonAndDiscovered(daemonSnapshot?.panes ?? [], discovery.panes, discovery.paneIds, true);
+    const panes = await attachTerminalPreviews(mergeDaemonAndDiscovered(daemonSnapshot?.panes ?? [], discovery.panes, discovery.paneIds, true), runner);
     return {
       panes: await deriveStalledStatuses(panes, { now, runner, tracker: options.stallTracker, stalledMs: options.stalledMs }),
       daemonAvailable: daemonSnapshot?.daemonAvailable ?? false,

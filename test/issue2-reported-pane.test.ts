@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import os from 'node:os';
 import path from 'node:path';
 import { SnapshotStore, startDaemon } from '../src/daemon.js';
+import { loadSwitcherSnapshot } from '../src/snapshot.js';
 import { CommandRunner } from '../src/tmux.js';
 import { renderSwitcherFrame } from '../src/switcherLayout.js';
 import { sendDaemonRequest } from '../src/ipc.js';
@@ -13,6 +14,9 @@ function fixtureRunner(git = true): CommandRunner {
     async execFile(file, args) {
       if (file === 'tmux' && args[0] === 'list-panes') {
         return { stdout: '%42\tmain\t1\t2\t/Users/tung/work/watcher\t1234\tpi\tagents\n', stderr: '' };
+      }
+      if (file === 'tmux' && args[0] === 'capture-pane') {
+        return { stdout: 'daemon pane recent output\nterminal preview from event pane\n', stderr: '' };
       }
       if (file === 'git' && git) {
         const command = args.slice(2).join(' ');
@@ -206,6 +210,21 @@ test('session-started placeholder is not rendered as a user message and resets s
   const frame = renderSwitcherFrame({ panes: [pane], daemonAvailable: true, tmuxAvailable: true, now: 1_700_000_001_000 }, 130, 20, { useColor: false }).join('\n');
   assert.match(frame, /Waiting for first task/);
   assert.doesNotMatch(frame, /User message/);
+});
+
+test('event-sourced panes get terminal previews from tmux snapshots', async () => {
+  const socketPath = path.join(os.tmpdir(), `watcher-test-preview-${process.pid}-${Date.now()}.sock`);
+  const store = new SnapshotStore();
+  const server = await startDaemon({ socketPath, runner: fixtureRunner(), store });
+  try {
+    await sendDaemonRequest({ type: 'event', event: piEvent('agent-finished', { finalMessage: 'Done.' }, 1_700_000_000_000) }, { socketPath });
+    const snapshot = await loadSwitcherSnapshot({ runner: fixtureRunner(), now: 1_700_000_010_000, socketPath });
+    assert.equal(snapshot.panes[0]?.terminalPreview, 'daemon pane recent output\nterminal preview from event pane');
+    assert.equal(snapshot.panes[0]?.observation?.terminalPreview, true);
+    assert.match(renderSwitcherFrame(snapshot, 120, 24, { useColor: false }).join('\n'), /terminal preview/);
+  } finally {
+    await new Promise<void>((resolve) => server.close(() => resolve()));
+  }
 });
 
 test('daemon exposes local snapshot API', async () => {
