@@ -12,14 +12,24 @@ export type DaemonResponse =
   | { ok: true; snapshot?: SwitcherSnapshot }
   | { ok: false; error: string };
 
+function mergePaneEvent(previous: AgentPane | undefined, pane: AgentPane): AgentPane {
+  const preserveTaskSummary = previous?.summary && pane.status === 'idle' && !pane.currentAction;
+  return {
+    ...previous,
+    ...pane,
+    summary: preserveTaskSummary ? previous.summary : pane.summary,
+  };
+}
+
 export class SnapshotStore {
   private panes = new Map<string, AgentPane>();
 
   async recordHookEvent(event: HookEventInput, runner: CommandRunner = nodeCommandRunner): Promise<AgentPane> {
     const pane = await normalizeHookEvent(event, runner);
     const previous = this.panes.get(pane.id);
-    this.panes.set(pane.id, { ...previous, ...pane });
-    return pane;
+    const merged = mergePaneEvent(previous, pane);
+    this.panes.set(pane.id, merged);
+    return merged;
   }
 
   snapshot(tmuxAvailable = true, now = Date.now()): SwitcherSnapshot {

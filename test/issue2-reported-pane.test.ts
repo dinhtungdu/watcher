@@ -60,10 +60,22 @@ test('stop event changes pane to idle and keeps the running agent visible', asyn
   await store.recordHookEvent({ agent: 'pi', event: 'prompt-submit', paneId: '%42', payload: { prompt: 'Visible task' }, now: 1_700_000_000_000 }, fixtureRunner());
   await store.recordHookEvent({ agent: 'pi', event: 'stop', paneId: '%42', payload: { lastAssistantMessage: 'Done' }, now: 1_700_000_010_000 }, fixtureRunner());
   const snapshot = store.snapshot(true, 1_700_000_010_000);
-  assert.equal(snapshot.panes[0]!.status, 'idle');
-  const frame = renderSwitcherFrame(snapshot, 90, 14, { useColor: false }).join('\n');
-  assert.match(frame, /Done/);
+  const pane = snapshot.panes[0]!;
+  assert.equal(pane.status, 'idle');
+  assert.equal(pane.summary, 'Visible task');
+  assert.equal(pane.lastMessage, 'Done');
+  const frame = renderSwitcherFrame(snapshot, 130, 18, { useColor: false }).join('\n');
+  assert.match(frame, /▸ Visible task/);
+  assert.match(frame, /▌ Done/);
   assert.match(frame, /idle/);
+});
+
+test('working pane can show latest assistant narration below the user task', async () => {
+  const store = new SnapshotStore();
+  await store.recordHookEvent({ agent: 'pi', event: 'prompt-submit', paneId: '%42', payload: { prompt: 'Refactor the detail pane', lastAssistantMessage: 'I am inspecting the layout now.' }, now: 1_700_000_000_000 }, fixtureRunner());
+  const frame = renderSwitcherFrame(store.snapshot(true, 1_700_000_005_000), 130, 20, { useColor: false }).join('\n');
+  assert.match(frame, /▸ Refactor the detail pane/);
+  assert.match(frame, /▌ I am inspecting the layout now\./);
 });
 
 test('daemon exposes local snapshot API', async () => {
