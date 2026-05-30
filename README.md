@@ -7,6 +7,7 @@ Built because I live in the terminal and already use tmux. Watcher is deliberate
 ![Watcher terminal preview](docs/assets/watcher-terminal-preview.png)
 
 ```sh
+npm install -g @dinhtungdu/watcher
 watcher
 watcher integrations install pi
 ```
