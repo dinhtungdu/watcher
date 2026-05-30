@@ -11,6 +11,7 @@ export interface SwitcherRenderState {
   useColor?: boolean;
   layoutOverride?: LayoutMode;
   home?: string;
+  frameIndex?: number;
 }
 
 interface PaneGroupInfo {
@@ -41,6 +42,8 @@ export interface RepoGroup {
 
 const DISCOVERY_FALLBACK_ACTION = 'tmux/process discovery fallback';
 
+const WORKING_SPINNER = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+
 const statusColors: Record<AgentStatus, string> = {
   needs_input: '\x1b[33m',
   stalled: '\x1b[35m',
@@ -56,8 +59,9 @@ export function chooseLayout(width: number, override?: LayoutMode): LayoutMode {
   return 'wide';
 }
 
-function statusDot(status: AgentStatus, useColor: boolean): string {
-  return useColor ? `${statusColors[status]}●\x1b[0m` : '●';
+function statusDot(status: AgentStatus, useColor: boolean, frameIndex = 0): string {
+  const glyph = status === 'working' ? WORKING_SPINNER[frameIndex % WORKING_SPINNER.length]! : '●';
+  return useColor ? `${statusColors[status]}${glyph}\x1b[0m` : glyph;
 }
 
 function paneGroup(pane: AgentPane, home?: string): PaneGroupInfo {
@@ -182,8 +186,8 @@ function worktreeHeader(worktree: WorktreeGroup, width: number, useColor: boolea
   return fit(`  ${bold(shortPath(worktree.path, home), useColor)}`, width, useColor);
 }
 
-function paneRow(pane: AgentPane, width: number, layout: LayoutMode, selectedPane: boolean, useColor: boolean): string {
-  const dot = selectedPane ? '●' : statusDot(pane.status, useColor);
+function paneRow(pane: AgentPane, width: number, layout: LayoutMode, selectedPane: boolean, useColor: boolean, frameIndex: number): string {
+  const dot = selectedPane ? statusDot(pane.status, false, frameIndex) : statusDot(pane.status, useColor, frameIndex);
   const summary = pane.summary || '(no summary yet)';
   const row = layout === 'narrow'
     ? `${dot} ${fit(summary, Math.max(8, width - 8), useColor)}`
@@ -192,7 +196,7 @@ function paneRow(pane: AgentPane, width: number, layout: LayoutMode, selectedPan
   return selectedPane ? selected(padded, useColor) : padded;
 }
 
-function listLines(groups: RepoGroup[], width: number, layout: LayoutMode, selectedPaneId: string | undefined, useColor: boolean, home?: string): { lines: string[]; selectedLineIndex: number } {
+function listLines(groups: RepoGroup[], width: number, layout: LayoutMode, selectedPaneId: string | undefined, useColor: boolean, home: string | undefined, frameIndex: number): { lines: string[]; selectedLineIndex: number } {
   const lines: string[] = [];
   let selectedLineIndex = 0;
   for (const repo of groups) {
@@ -201,7 +205,7 @@ function listLines(groups: RepoGroup[], width: number, layout: LayoutMode, selec
       lines.push(worktreeHeader(worktree, width, useColor, home));
       for (const pane of worktree.panes) {
         if (pane.id === selectedPaneId) selectedLineIndex = lines.length;
-        lines.push(paneRow(pane, width, layout, pane.id === selectedPaneId, useColor));
+        lines.push(paneRow(pane, width, layout, pane.id === selectedPaneId, useColor, frameIndex));
       }
     }
   }
@@ -210,7 +214,7 @@ function listLines(groups: RepoGroup[], width: number, layout: LayoutMode, selec
 
 function pagedList(groups: RepoGroup[], width: number, height: number, layout: LayoutMode, state: SwitcherRenderState, selectedPaneId: string | undefined): string[] {
   const useColor = state.useColor ?? false;
-  const { lines, selectedLineIndex } = listLines(groups, width, layout, selectedPaneId, useColor, state.home);
+  const { lines, selectedLineIndex } = listLines(groups, width, layout, selectedPaneId, useColor, state.home, state.frameIndex ?? 0);
   let scroll = state.scroll ?? 0;
   if (selectedLineIndex < scroll) scroll = selectedLineIndex;
   if (selectedLineIndex >= scroll + height) scroll = selectedLineIndex - height + 1;
@@ -319,7 +323,7 @@ function detailContent(pane: AgentPane, now: number, home: string | undefined, w
   const cwdLine = cwd && cwd !== locationPath ? labelledLine('cwd', cwd) : undefined;
   return spacedSections([
     detailSection('Status', [
-      `${statusDot(pane.status, false)} ${pane.agentType} · ${pane.status} · updated ${formatAge(ageSeconds(pane, now))} ago`,
+      `${statusDot(pane.status, useColor, now)} ${pane.agentType} · ${pane.status} · updated ${formatAge(ageSeconds(pane, now))} ago`,
       fallbackDiscovered ? 'discovered by tmux process scan; install hooks for rich status' : undefined,
       pane.reportedStatus && pane.reportedStatus !== pane.status ? `reported  ${pane.reportedStatus}` : undefined,
     ], useColor),

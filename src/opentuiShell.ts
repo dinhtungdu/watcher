@@ -31,6 +31,7 @@ export async function runOpenTuiSwitcher(): Promise<void> {
     if (closed || redrawInFlight) return;
     redrawInFlight = true;
     try {
+      state.frameIndex = (state.frameIndex ?? 0) + 1;
       const snapshot = await loadSwitcherSnapshot({ stallTracker });
       currentPanes = selectablePanes(groupPanes(snapshot.panes, snapshot.now, state.home));
       const { width, height } = terminalSize();
@@ -94,7 +95,7 @@ export async function runOpenTuiSwitcher(): Promise<void> {
   process.stdin.on('data', inputHandler);
   process.stdout.on('resize', resizeHandler);
   process.once('SIGINT', sigintHandler);
-  const interval = setInterval(() => void redraw(), 2000);
+  const interval = setInterval(() => void redraw(), 250);
   await redraw();
 
   await closedPromise;
