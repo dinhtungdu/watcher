@@ -1,7 +1,7 @@
 import { AgentPane, AgentStatus, STATUS_RANK, SwitcherSnapshot, isRunningAgentStatus } from './model.js';
 import { activationTargetLabel } from './activation.js';
 import { terminalTargetCwd } from './terminalTarget.js';
-import { basename, bold, dim, fit, formatAge, line, selected, shortPath } from './text.js';
+import { basename, bold, dim, fit, formatAge, line, selected, shortPath, singleLine } from './text.js';
 
 export type LayoutMode = 'narrow' | 'medium' | 'wide';
 
@@ -226,8 +226,21 @@ function tmuxTarget(pane: AgentPane): string {
   return activationTargetLabel(pane);
 }
 
+function uniqueDetailText(values: Array<string | undefined>): string[] {
+  const seen = new Set<string>();
+  const lines: string[] = [];
+  for (const value of values) {
+    const text = singleLine(value ?? '').trim();
+    if (!text || seen.has(text)) continue;
+    seen.add(text);
+    lines.push(text);
+  }
+  return lines;
+}
+
 function detailContent(pane: AgentPane, now: number, home?: string): string[] {
   const group = paneGroup(pane, home);
+  const narrative = uniqueDetailText([pane.summary || '(no summary yet)', pane.currentAction, pane.lastMessage]);
   return [
     'Now',
     `${statusDot(pane.status, false)} ${pane.agentType} · ${pane.status} · ${formatAge(ageSeconds(pane, now))}`,
@@ -237,9 +250,7 @@ function detailContent(pane: AgentPane, now: number, home?: string): string[] {
     group.isGit ? `branch    ${group.branch}` : 'no repo/branch metadata',
     group.isGit ? `worktree  ${shortPath(group.path, home)}` : '',
     '',
-    pane.summary || '(no summary yet)',
-    pane.currentAction || pane.lastMessage || '',
-    pane.currentAction && pane.lastMessage ? pane.lastMessage : '',
+    ...narrative,
     '',
     'Open',
     tmuxTarget(pane),

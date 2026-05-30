@@ -78,6 +78,17 @@ test('renderer never emits embedded newlines from pane text', () => {
   assert.match(frame.join('\n'), /first line second line/);
 });
 
+test('details pane does not repeat identical summary and last message', () => {
+  const repeated = [pane({
+    id: '%9',
+    status: 'idle',
+    summary: 'same assistant final answer',
+    lastMessage: 'same assistant final answer',
+  })];
+  const frame = renderSwitcherFrame({ panes: repeated, daemonAvailable: true, tmuxAvailable: true, now }, 120, 18, { useColor: false, selectedPaneId: '%9' }).join('\n');
+  assert.equal(frame.match(/same assistant final answer/g)?.length, 2);
+});
+
 test('medium and narrow layouts collapse to list-first selected summary', () => {
   const medium = renderSwitcherFrame({ panes, daemonAvailable: true, tmuxAvailable: true, now }, 90, 18, { useColor: false, home: '/Users/tung', selectedPaneId: '%2' }).join('\n');
   const narrow = renderSwitcherFrame({ panes, daemonAvailable: true, tmuxAvailable: true, now }, 60, 18, { useColor: false, home: '/Users/tung', selectedPaneId: '%2' }).join('\n');
