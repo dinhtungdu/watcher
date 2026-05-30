@@ -281,6 +281,10 @@ function detailSection(title: string, lines: Array<string | undefined>, useColor
   return content.length > 0 ? [bold(title, useColor), ...content] : [];
 }
 
+function spacedSections(sections: string[][]): string[] {
+  return sections.filter((section) => section.length > 0).flatMap((section, index) => index === 0 ? section : ['', ...section]);
+}
+
 function detailContent(pane: AgentPane, now: number, home: string | undefined, width: number, useColor: boolean): string[] {
   const group = paneGroup(pane, home);
   const summary = singleLine(pane.summary || '(no summary yet)').trim();
@@ -291,32 +295,30 @@ function detailContent(pane: AgentPane, now: number, home: string | undefined, w
   const messageLines = wrapText(lastMessage, messageWidth, 5).map((value) => `${bold('▌', useColor)} ${value}`);
   const command = terminalTargetCommand(pane.target);
   const pid = terminalTargetPid(pane.target);
-  return [
-    ...detailSection('Status', [
+  const cwd = pane.cwd ? shortPath(pane.cwd, home) : undefined;
+  const locationPath = shortPath(group.path, home);
+  const cwdLine = cwd && cwd !== locationPath ? labelledLine('cwd', cwd) : undefined;
+  return spacedSections([
+    detailSection('Status', [
       `${statusDot(pane.status, false)} ${pane.agentType} · ${pane.status} · updated ${formatAge(ageSeconds(pane, now))} ago`,
       pane.reportedStatus && pane.reportedStatus !== pane.status ? `reported  ${pane.reportedStatus}` : undefined,
     ], useColor),
-    '',
-    ...detailSection('Task', [...taskLines, labelledLine('action', pane.currentAction)], useColor),
-    '',
-    ...detailSection('Last message', messageLines, useColor),
-    '',
-    ...detailSection(group.isGit ? 'Git worktree' : 'Path fallback', [
+    detailSection('Task', [...taskLines, labelledLine('action', pane.currentAction)], useColor),
+    detailSection('Last message', messageLines, useColor),
+    detailSection(group.isGit ? 'Git worktree' : 'Path fallback', [
       group.isGit ? labelledLine('repo', group.repoTitle) : labelledLine('path', shortPath(group.path, home)),
       group.isGit ? labelledLine('branch', group.branch) : undefined,
-      group.isGit ? labelledLine('worktree', shortPath(group.path, home)) : undefined,
-      labelledLine('cwd', pane.cwd ? shortPath(pane.cwd, home) : undefined),
+      group.isGit ? labelledLine('worktree', locationPath) : undefined,
+      cwdLine,
     ], useColor),
-    '',
-    ...detailSection('Terminal', [
-      labelledLine('backend', pane.target.backend),
+    detailSection('Terminal', [
       labelledLine('target', tmuxTarget(pane)),
+      labelledLine('backend', pane.target.backend),
       labelledLine('command', command),
       pid === undefined ? undefined : labelledLine('pid', String(pid)),
     ], useColor),
-    '',
-    ...detailSection('Actions', ['enter     activate pane', 'q         quit'], useColor),
-  ].filter((value) => value !== '');
+    detailSection('Actions', ['enter     activate pane', 'q         quit'], useColor),
+  ]);
 }
 
 function boxed(title: string, content: string[], width: number, height: number, useColor: boolean): string[] {

@@ -109,6 +109,13 @@ test('details pane wraps and marks task text separately from assistant message',
   assert.match(frame, /▌ Please approve the layout\./);
 });
 
+test('details pane leaves breathing room between sections', () => {
+  const frame = renderSwitcherFrame({ panes: [pane({ id: '%9', status: 'working', summary: 'Make details readable' })], daemonAvailable: true, tmuxAvailable: true, now }, 130, 22, { useColor: false, selectedPaneId: '%9' }).map(stripAnsi);
+  const statusIndex = frame.findIndex((line) => line.includes('Status'));
+  const taskIndex = frame.findIndex((line) => line.includes('Task'));
+  assert.equal(taskIndex, statusIndex + 3);
+});
+
 test('medium and narrow layouts collapse to list-first selected summary', () => {
   const medium = renderSwitcherFrame({ panes, daemonAvailable: true, tmuxAvailable: true, now }, 90, 18, { useColor: false, home: '/Users/tung', selectedPaneId: '%2' }).join('\n');
   const narrow = renderSwitcherFrame({ panes, daemonAvailable: true, tmuxAvailable: true, now }, 60, 18, { useColor: false, home: '/Users/tung', selectedPaneId: '%2' }).join('\n');
