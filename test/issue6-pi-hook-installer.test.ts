@@ -34,6 +34,7 @@ test('watcher hooks install pi writes managed Pi extension and reload guidance',
   assert.match(content, /report\("stop"/);
   assert.match(content, /spawn\("watcher", \["hook", "pi", event\]/);
   assert.match(content, /\.join\("\\n"\)/);
+  assert.equal(content.includes('replace(/\\s+/g, " ")'), true);
 });
 
 test('installer overwrites only Watcher-managed files and refuses conflicts', async () => {

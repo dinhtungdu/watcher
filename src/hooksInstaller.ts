@@ -55,8 +55,13 @@ function lastAssistantMessage(messages: unknown): string | undefined {
 
 function compactUnknown(value: unknown): string | undefined {
   if (value === undefined || value === null) return undefined;
-  const text = typeof value === "string" ? value : JSON.stringify(value);
-  return text.replace(/\s+/g, " ").trim().slice(0, 240) || undefined;
+  let text: string;
+  try {
+    text = typeof value === "string" ? value : JSON.stringify(value);
+  } catch {
+    text = String(value);
+  }
+  return text.replace(/\\s+/g, " ").trim().slice(0, 240) || undefined;
 }
 
 function report(event: string, payload: Record<string, unknown> = {}) {
