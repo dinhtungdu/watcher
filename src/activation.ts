@@ -1,4 +1,4 @@
-import { AgentPane, GhosttyTarget, TmuxTarget } from './model.js';
+import { AgentPane, TmuxTarget } from './model.js';
 import { paneTargetLabel } from './terminalTarget.js';
 import { CommandRunner, nodeCommandRunner } from './tmux.js';
 
@@ -23,10 +23,6 @@ function requireTmuxTarget(target: TmuxTarget): { paneId: string; session: strin
   return { paneId, session, window };
 }
 
-function escapeAppleScriptString(value: string): string {
-  return value.replaceAll('\\', '\\\\').replaceAll('"', '\\"');
-}
-
 export function activationTargetLabel(pane: AgentPane): string {
   return paneTargetLabel(pane);
 }
@@ -48,28 +44,8 @@ export function buildTmuxActivationCommands(target: TmuxTarget, insideTmux: bool
   ];
 }
 
-export function buildGhosttyActivationScript(target: GhosttyTarget): string {
-  const terminalId = escapeAppleScriptString(target.terminalId);
-  const lines = [
-    'tell application "Ghostty"',
-    `  set targetTerminal to first terminal whose id is "${terminalId}"`,
-    '  focus targetTerminal',
-    'end tell',
-  ];
-  return lines.join('\n');
-}
-
-export function buildGhosttyActivationCommands(target: GhosttyTarget): TerminalCommand[] {
-  return [{ file: 'osascript', args: ['-e', buildGhosttyActivationScript(target)] }];
-}
-
 export function buildActivationCommands(pane: AgentPane, insideTmux: boolean): TerminalCommand[] {
-  switch (pane.target.backend) {
-    case 'tmux':
-      return buildTmuxActivationCommands(pane.target, insideTmux);
-    case 'ghostty':
-      return buildGhosttyActivationCommands(pane.target);
-  }
+  return buildTmuxActivationCommands(pane.target, insideTmux);
 }
 
 export async function activateAgentPane(pane: AgentPane, options: ActivationOptions = {}): Promise<void> {

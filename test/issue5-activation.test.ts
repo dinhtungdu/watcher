@@ -1,8 +1,8 @@
 import { test } from 'bun:test';
 import assert from 'node:assert/strict';
-import { activateAgentPane, activationTargetLabel, buildActivationCommands, buildGhosttyActivationScript } from '../src/activation.js';
+import { activateAgentPane, activationTargetLabel, buildActivationCommands } from '../src/activation.js';
 import { AgentPane } from '../src/model.js';
-import { ghosttyTarget, tmuxTarget } from '../src/terminalTarget.js';
+import { tmuxTarget } from '../src/terminalTarget.js';
 import { CommandRunner } from '../src/tmux.js';
 import { renderSwitcherFrame } from '../src/switcherLayout.js';
 
@@ -76,25 +76,4 @@ test('selected-pane detail shows the terminal target activation will use', () =>
 
 test('missing tmux target fails loudly before running half-baked activation soup', () => {
   assert.throws(() => buildActivationCommands(pane({ target: tmuxTarget({ paneId: '%42' }) }), true), /missing tmux session\/window\/pane target/);
-});
-
-test('ghostty activation uses osascript to focus a terminal surface', async () => {
-  const ghosttyPane = pane({
-    id: 'ghostty:terminal-1',
-    target: ghosttyTarget({ terminalId: 'terminal-1', windowName: 'Ghostty', tabName: 'agents', cwd: '/repo' }),
-  });
-  const commands = buildActivationCommands(ghosttyPane, false);
-  assert.equal(commands[0]?.file, 'osascript');
-  assert.match(commands[0]?.args.join('\n') ?? '', /focus targetTerminal/);
-  assert.match(buildGhosttyActivationScript(ghosttyPane.target as any), /first terminal whose id is "terminal-1"/);
-
-  const calls: string[][] = [];
-  const runner: CommandRunner = {
-    async execFile(file, args) {
-      calls.push([file, ...args]);
-      return { stdout: '', stderr: '' };
-    },
-  };
-  await activateAgentPane(ghosttyPane, { runner, env: {} });
-  assert.equal(calls[0]?.[0], 'osascript');
 });

@@ -64,7 +64,7 @@ export async function deriveStalledStatuses(panes: AgentPane[], options: Stalled
       continue;
     }
 
-    const outputHash = pane.target.backend === 'tmux' ? await capturePaneTailHash(pane.target.paneId, runner) : undefined;
+    const outputHash = await capturePaneTailHash(pane.target.paneId, runner);
     const title = observedTitle(pane);
     const previous = tracker.entries.get(pane.id);
     let entry: StallEntry = previous ?? {

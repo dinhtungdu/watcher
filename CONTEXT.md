@@ -24,6 +24,10 @@ _Avoid_: Stuck agent
 An explicit integration installed into a supported agent so it can report Agent Status for the current Agent Pane.
 _Avoid_: Silent hook, auto hook
 
+**Hook Surface Identity**:
+The backend-aware identity a Status Hook reports so Watcher can associate an event with the correct Agent Pane.
+_Avoid_: Pane id, hook target, routing metadata
+
 **Repo Group**:
 A collection of Agent Panes that belong to the same source repository. Repo Groups contain one or more Worktree Groups.
 _Avoid_: Project group, repo bucket
@@ -37,7 +41,7 @@ A collection of Agent Panes grouped by path when Watcher cannot determine reposi
 _Avoid_: Unknown repo, ungrouped panes
 
 **Terminal Backend**:
-A local terminal environment that can discover, identify, and activate Agent Panes. tmux and Ghostty are Terminal Backends.
+A local terminal environment that can discover, identify, and activate Agent Panes. tmux is Watcher's current Terminal Backend.
 _Avoid_: Provider, terminal type, transport
 
 **Running Agent Pane**:

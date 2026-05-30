@@ -4,9 +4,9 @@ Watcher is a tmux-wide Agent Switcher. It lists running agent panes across all l
 
 ## Scope
 
-- Local terminal backends only.
-- tmux is the first full backend for discovery, hook identity, stalled detection, and activation.
-- Ghostty macOS support uses Ghostty's AppleScript scripting dictionary for activation when a Ghostty terminal surface is known; unhooked Ghostty discovery is out of MVP until stable Ghostty exposes enough process metadata.
+- Local tmux only.
+- tmux is the supported backend for discovery, hook identity, stalled detection, and activation.
+- Native Ghostty support is not part of the MVP.
 - Bun/TypeScript CLI named `watcher`.
 - Prototype-aligned terminal switcher UI rendered by the Bun CLI.
 - In-memory Watcher Daemon.
@@ -100,16 +100,15 @@ While the switcher is open, tmux discovery should:
 - capture pane tail/hash for candidate agent panes only
 - derive `stalled` when status is `working` and no hook/title/output change for 5 minutes
 
-Ghostty discovery is hook-first for MVP. A known Ghostty terminal surface may be activated through the macOS scripting dictionary, but Watcher does not promise unhooked Ghostty process discovery until stable Ghostty exposes foreground PID/TTY or an equivalent non-AppleScript control API.
+Native Ghostty discovery, hook identity, and activation are out of MVP. tmux sessions running inside Ghostty remain supported through the tmux backend.
 
-No ghost panes: if a backend surface no longer exists, hide it.
+No ghost panes: if a tmux pane no longer exists, hide it.
 
 ## Activation
 
 - tmux inside tmux: switch client to target session, select target window, select target pane.
 - tmux outside tmux: select target window/pane first, then attach to target session.
-- Ghostty on macOS: use AppleScript to focus the target terminal surface.
-- Use backend-local target ids, such as tmux pane ids like `%42` or Ghostty terminal surface ids.
+- Use tmux pane ids like `%42`.
 - Exit TUI before activation/attach/focus.
 
 ## Hooks
@@ -153,7 +152,7 @@ Installer:
 ## Non-goals MVP
 
 - remote SSH/tmux relay
-- unhooked Ghostty process discovery before stable foreground PID/TTY support
+- native Ghostty support before stable foreground PID/TTY support and cross-platform activation control
 - session resume/restore
 - history database
 - unread/dismiss workflow

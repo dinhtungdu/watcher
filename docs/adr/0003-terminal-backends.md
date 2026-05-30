@@ -1,13 +1,13 @@
 # Terminal Backend abstraction
 
-Watcher generalizes Agent Pane identity and activation behind Terminal Backends instead of treating tmux panes as the universal model. tmux remains the first full backend, while Ghostty on macOS can use its AppleScript scripting dictionary for terminal-surface activation; Ghostty process discovery remains hook-first until stable Ghostty exposes enough target metadata such as foreground PID/TTY outside AppleScript.
+Watcher keeps a Terminal Target seam so core Agent Switcher logic does not depend directly on tmux field names. tmux remains the only supported backend. Native Ghostty support was investigated and postponed because current stable Ghostty does not provide both reliable cross-platform surface identity and cross-platform activation control.
 
 ## Considered Options
 
-- Keep tmux fields in the core model: rejected because Ghostty windows, tabs, and terminal surfaces do not fit tmux session/window/pane identity without lying in field names.
-- Use Ghostty's `ghostty` binary as a control CLI: rejected because current CLI IPC is not a targetable focus/select API for existing terminal surfaces on macOS.
-- Use macOS AppleScript for Ghostty activation: accepted because Ghostty's supported scripting dictionary exposes stable window/tab/terminal ids and `focus`, `select tab`, and `activate window` commands.
+- Keep tmux fields in the core Agent Pane model: rejected because it spreads tmux vocabulary through grouping, rendering, stalled detection, and activation code.
+- Add Ghostty as a runtime backend now: rejected because support would be partial or platform-specific.
+- Use macOS AppleScript for Ghostty activation: rejected because Watcher should support every platform Ghostty supports, and macOS-only automation would turn Terminal Backend into a platform-specific footgun.
 
 ## Consequences
 
-Core switcher code should depend on Terminal Target helpers instead of tmux-specific fields. Backend-specific discovery, capture, and activation live at the edges. Ghostty support is macOS-first unless a non-AppleScript control API becomes available.
+Core switcher code should depend on Terminal Target helpers instead of tmux-specific fields. Runtime support remains tmux-only until another terminal backend can provide identity, discovery, stalled-signal inputs, and activation without platform-specific hacks.
