@@ -1,6 +1,6 @@
 import { AgentPane, AgentStatus, STATUS_RANK, SwitcherSnapshot, isRunningAgentStatus } from './model.js';
 import { activationTargetLabel } from './activation.js';
-import { terminalTargetCwd } from './terminalTarget.js';
+import { terminalTargetCommand, terminalTargetCwd, terminalTargetPid } from './terminalTarget.js';
 import { basename, bold, dim, fit, formatAge, line, selected, shortPath, singleLine } from './text.js';
 
 export type LayoutMode = 'narrow' | 'medium' | 'wide';
@@ -248,23 +248,73 @@ function uniqueDetailText(values: Array<string | undefined>): string[] {
   return lines;
 }
 
-function detailContent(pane: AgentPane, now: number, home?: string): string[] {
+function wrapText(value: string | undefined, width: number, maxLines = 4): string[] {
+  const text = singleLine(value ?? '').trim();
+  if (!text || width <= 0 || maxLines <= 0) return [];
+  const words = text.split(/\s+/);
+  const lines: string[] = [];
+  let current = '';
+  for (const word of words) {
+    const next = current ? `${current} ${word}` : word;
+    if (next.length <= width) {
+      current = next;
+      continue;
+    }
+    if (current) lines.push(current);
+    current = word.length > width ? `${word.slice(0, Math.max(1, width - 1))}…` : word;
+    if (lines.length >= maxLines) break;
+  }
+  if (current && lines.length < maxLines) lines.push(current);
+  if (lines.length === maxLines && words.join(' ').length > lines.join(' ').length) {
+    lines[maxLines - 1] = `${lines[maxLines - 1]!.replace(/[.…]+$/u, '').slice(0, Math.max(1, width - 1))}…`;
+  }
+  return lines;
+}
+
+function labelledLine(label: string, value: string | undefined): string | undefined {
+  const text = singleLine(value ?? '').trim();
+  return text ? `${label.padEnd(10)}${text}` : undefined;
+}
+
+function detailSection(title: string, lines: Array<string | undefined>, useColor: boolean): string[] {
+  const content = lines.filter((value): value is string => Boolean(value));
+  return content.length > 0 ? [bold(title, useColor), ...content] : [];
+}
+
+function detailContent(pane: AgentPane, now: number, home: string | undefined, width: number, useColor: boolean): string[] {
   const group = paneGroup(pane, home);
-  const narrative = uniqueDetailText([pane.summary || '(no summary yet)', pane.currentAction, pane.lastMessage]);
+  const summary = singleLine(pane.summary || '(no summary yet)').trim();
+  const lastMessage = singleLine(pane.lastMessage ?? '').trim();
+  const showSummary = summary && !isDuplicateDetailText(summary, lastMessage ? [lastMessage] : []);
+  const messageWidth = Math.max(12, width - 4);
+  const messageLines = wrapText(lastMessage, messageWidth, 5).map((value) => `${bold('▌', useColor)} ${value}`);
+  const command = terminalTargetCommand(pane.target);
+  const pid = terminalTargetPid(pane.target);
   return [
-    'Now',
-    `${statusDot(pane.status, false)} ${pane.agentType} · ${pane.status} · ${formatAge(ageSeconds(pane, now))}`,
+    ...detailSection('Status', [
+      `${statusDot(pane.status, false)} ${pane.agentType} · ${pane.status} · updated ${formatAge(ageSeconds(pane, now))} ago`,
+      pane.reportedStatus && pane.reportedStatus !== pane.status ? `reported  ${pane.reportedStatus}` : undefined,
+    ], useColor),
     '',
-    group.isGit ? 'Git worktree' : 'Path fallback',
-    group.isGit ? `repo      ${group.repoTitle}` : `path      ${shortPath(group.path, home)}`,
-    group.isGit ? `branch    ${group.branch}` : 'no repo/branch metadata',
-    group.isGit ? `worktree  ${shortPath(group.path, home)}` : '',
+    ...detailSection('Task', [showSummary ? summary : undefined, labelledLine('action', pane.currentAction)], useColor),
     '',
-    ...narrative,
+    ...detailSection('Last message', messageLines, useColor),
     '',
-    'Open',
-    tmuxTarget(pane),
-    'Watcher exits after activation',
+    ...detailSection(group.isGit ? 'Git worktree' : 'Path fallback', [
+      group.isGit ? labelledLine('repo', group.repoTitle) : labelledLine('path', shortPath(group.path, home)),
+      group.isGit ? labelledLine('branch', group.branch) : undefined,
+      group.isGit ? labelledLine('worktree', shortPath(group.path, home)) : undefined,
+      labelledLine('cwd', pane.cwd ? shortPath(pane.cwd, home) : undefined),
+    ], useColor),
+    '',
+    ...detailSection('Terminal', [
+      labelledLine('backend', pane.target.backend),
+      labelledLine('target', tmuxTarget(pane)),
+      labelledLine('command', command),
+      pid === undefined ? undefined : labelledLine('pid', String(pid)),
+    ], useColor),
+    '',
+    ...detailSection('Actions', ['enter     activate pane', 'q         quit'], useColor),
   ].filter((value) => value !== '');
 }
 
@@ -286,7 +336,7 @@ function renderWide(groups: RepoGroup[], width: number, height: number, layout: 
   const leftWidth = width - rightWidth - 3;
   const left = pagedList(groups, leftWidth, height, layout, state, selectedPaneId);
   const pane = selectablePanes(groups).find((candidate) => candidate.id === selectedPaneId) ?? selectablePanes(groups)[0]!;
-  const right = boxed('details', detailContent(pane, now, state.home), rightWidth, height, useColor);
+  const right = boxed('details', detailContent(pane, now, state.home, rightWidth - 2, useColor), rightWidth, height, useColor);
   return Array.from({ length: height }, (_, index) => `${fit(left[index] || '', leftWidth, useColor)} ${dim('│', useColor)} ${fit(right[index] || '', rightWidth, useColor)}`);
 }
 

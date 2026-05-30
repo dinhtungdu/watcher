@@ -53,7 +53,7 @@ test('selected row uses full-width reverse highlight without hardcoded color', (
 test('wide layout has rich right detail pane', () => {
   const frame = renderSwitcherFrame({ panes, daemonAvailable: true, tmuxAvailable: true, now }, 130, 24, { useColor: false, home: '/Users/tung', selectedPaneId: '%2' }).join('\n');
   assert.match(frame, /details/);
-  assert.match(frame, /● pi · needs_input · 5s/);
+  assert.match(frame, /● pi · needs_input · updated 5s ago/);
   assert.match(frame, /repo\s+watcher/);
   assert.match(frame, /branch\s+feature\/tui/);
   assert.match(frame, /worktree\s+~\/work\/watcher-feature/);
@@ -61,7 +61,7 @@ test('wide layout has rich right detail pane', () => {
   assert.match(frame, /waiting for approval/);
   assert.match(frame, /Please pick one\./);
   assert.match(frame, /s:1\.1 \(%2\)/);
-  assert.match(frame, /needs_input · 5s/);
+  assert.match(frame, /needs_input · updated 5s ago/);
 });
 
 test('renderer never emits embedded newlines from pane text', () => {
