@@ -9,6 +9,7 @@ import { discoverGitMetadata } from './git.js';
 export interface DiscoveryResult {
   tmuxAvailable: boolean;
   paneIds: Set<string>;
+  agentPaneIds: Set<string>;
   panes: AgentPane[];
 }
 
@@ -46,7 +47,7 @@ export async function discoverUnintegratedPanes(runner: CommandRunner = nodeComm
   try {
     panes = await listTmuxPanes(runner);
   } catch {
-    return { tmuxAvailable: false, paneIds: new Set(), panes: [] };
+    return { tmuxAvailable: false, paneIds: new Set(), agentPaneIds: new Set(), panes: [] };
   }
   const discovered: AgentPane[] = [];
   for (const tmux of panes) {
@@ -75,15 +76,27 @@ export async function discoverUnintegratedPanes(runner: CommandRunner = nodeComm
       updatedAt: now,
     });
   }
-  return { tmuxAvailable: true, paneIds: new Set(panes.map((pane) => canonicalSurfaceKey(surfaceFromTarget(pane)))), panes: discovered };
+  return {
+    tmuxAvailable: true,
+    paneIds: new Set(panes.map((pane) => canonicalSurfaceKey(surfaceFromTarget(pane)))),
+    agentPaneIds: new Set(discovered.map((pane) => pane.id)),
+    panes: discovered,
+  };
 }
 
-export function mergeDaemonAndDiscovered(daemonPanes: AgentPane[], discovered: AgentPane[], livePaneIds: Set<string>, tmuxAvailable: boolean): AgentPane[] {
+export function mergeDaemonAndDiscovered(
+  daemonPanes: AgentPane[],
+  discovered: AgentPane[],
+  livePaneIds: Set<string>,
+  tmuxAvailable: boolean,
+  liveAgentPaneIds: Set<string> = new Set(discovered.map((pane) => pane.id)),
+): AgentPane[] {
   const result = new Map<string, AgentPane>();
   for (const pane of daemonPanes) {
     const normalized = normalizeAgentPaneTarget(pane);
     if (!normalized) continue;
     if (tmuxAvailable && !livePaneIds.has(normalized.id)) continue;
+    if (tmuxAvailable && normalized.status === 'idle' && !liveAgentPaneIds.has(normalized.id)) continue;
     result.set(normalized.id, normalized);
   }
   for (const pane of discovered) {

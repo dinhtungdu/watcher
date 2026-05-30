@@ -61,6 +61,7 @@ test('tmux discovery detects direct and one-level child agent processes', async 
   assert.equal(result.panes.find((pane) => pane.id === 'tmux:%1')?.observation?.terminalPreview, true);
   assert.equal(result.panes.find((pane) => pane.id === 'tmux:%2')?.observation?.terminalPreview, false);
   assert.equal(result.panes.some((pane) => pane.id === 'tmux:%4'), false);
+  assert.deepEqual([...result.agentPaneIds].sort(), ['tmux:%1', 'tmux:%2', 'tmux:%3', 'tmux:%5']);
 });
 
 test('discovered panes carry grouping metadata and path fallback', async () => {
@@ -111,6 +112,21 @@ test('merge keeps daemon panes when tmux is unavailable but drops ghosts when tm
   };
   assert.equal(mergeDaemonAndDiscovered([stale], [], new Set(), false).some((pane) => pane.id === 'tmux:%99'), true);
   assert.equal(mergeDaemonAndDiscovered([stale], result.panes, result.paneIds, true).some((pane) => pane.id === 'tmux:%99'), false);
+});
+
+test('merge drops idle event-sourced panes after the agent process exits but tmux pane remains', async () => {
+  const idleExited: AgentPane = {
+    id: 'tmux:%4',
+    agentType: 'pi',
+    status: 'idle',
+    summary: 'Session quit',
+    target: tmuxTarget({ paneId: '%4' }),
+    updatedAt: 1_700_000_005_000,
+  };
+  const stillWorking: AgentPane = { ...idleExited, status: 'working', summary: 'Possibly mid-shutdown' };
+  const liveShellPaneIds = new Set(['tmux:%4']);
+  assert.equal(mergeDaemonAndDiscovered([idleExited], [], liveShellPaneIds, true, new Set()).some((pane) => pane.id === 'tmux:%4'), false);
+  assert.equal(mergeDaemonAndDiscovered([stillWorking], [], liveShellPaneIds, true, new Set()).some((pane) => pane.id === 'tmux:%4'), true);
 });
 
 test('merge tolerates legacy daemon panes that still use tmux field or backend-local ids', async () => {

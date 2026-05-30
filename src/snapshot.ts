@@ -50,7 +50,7 @@ export async function loadSwitcherSnapshot(options: SnapshotOptions = {}): Promi
 
   const discovery = await discoverUnintegratedPanes(runner, now);
   if (discovery.tmuxAvailable) {
-    const panes = await attachTerminalPreviews(mergeDaemonAndDiscovered(daemonSnapshot?.panes ?? [], discovery.panes, discovery.paneIds, true), runner);
+    const panes = await attachTerminalPreviews(mergeDaemonAndDiscovered(daemonSnapshot?.panes ?? [], discovery.panes, discovery.paneIds, true, discovery.agentPaneIds), runner);
     return {
       panes: await deriveStalledStatuses(panes, { now, runner, tracker: options.stallTracker, stalledMs: options.stalledMs }),
       daemonAvailable: daemonSnapshot?.daemonAvailable ?? false,

@@ -43,6 +43,9 @@ test('watcher integrations install pi writes managed Pi extension and reload gui
   assert.match(content, /report\("tool-finished"/);
   assert.match(content, /pi\.on\("agent_end"/);
   assert.match(content, /report\("agent-finished"/);
+  assert.match(content, /pi\.on\("session_shutdown"/);
+  assert.match(content, /event\.reason === "quit"/);
+  assert.match(content, /reportSync\("agent-finished"/);
   assert.match(content, /spawn\("watcher", \["event", "--quiet", "pi", event\]/);
   assert.match(content, /payloadWithSurface/);
   assert.match(content, /\.join\("\\n"\)/);
@@ -99,4 +102,5 @@ test('generated Pi extension is command-boundary only', () => {
   assert.match(content, /watcher", \["event", "--quiet", "pi", event\]/);
   assert.doesNotMatch(content, /net\.createConnection/);
   assert.match(content, /child\.stdin\.end\(JSON\.stringify\(payloadWithSurface\(payload\)\)\)/);
+  assert.match(content, /spawnSync\("watcher", \["event", "--quiet", "pi", event\]/);
 });
