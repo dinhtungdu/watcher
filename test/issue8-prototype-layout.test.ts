@@ -68,6 +68,22 @@ test('wide layout has rich right detail pane', () => {
   assert.ok(Math.abs((left?.length ?? 0) - (right?.length ?? 0)) <= 8);
 });
 
+test('wide glyphs do not overflow rendered frame width', () => {
+  const frame = renderSwitcherFrame({ panes: [pane({ id: '%9', status: 'idle', summary: 'Emoji width', lastMessage: 'Fair. I did the thing. 😅 Done with enough trailing words to reach the right edge.' })], daemonAvailable: true, tmuxAvailable: true, now }, 100, 18, { useColor: false, selectedPaneId: '%9' });
+  assert.equal(frame.every((line) => visibleLength(line) === 100), true);
+});
+
+test('text-style symbols such as tool gears keep detail border aligned', () => {
+  const frame = renderSwitcherFrame({ panes: [pane({
+    id: '%9',
+    status: 'working',
+    summary: 'Tool width',
+    activityItems: [{ id: 'tool:1', kind: 'tool', label: 'edit', state: 'running', text: '{"path":"test/issue4-tmux-discovery.test.ts","edits":[{"oldText":"a very long value","newText":"another very long value"}]}', updatedAt: now }],
+  })], daemonAvailable: true, tmuxAvailable: true, now }, 100, 18, { useColor: false, selectedPaneId: '%9' });
+  assert.equal(visibleLength('⚙'), 1);
+  assert.equal(frame.every((line) => visibleLength(line) === 100), true);
+});
+
 test('renderer never emits embedded newlines from pane text', () => {
   const noisy = [pane({
     id: '%9',
