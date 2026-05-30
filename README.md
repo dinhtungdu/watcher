@@ -2,6 +2,8 @@
 
 Watcher is a tmux-wide Agent Switcher for local coding agents. It lists running agent panes across tmux sessions, groups them by `repo > worktree/branch > sessions`, shows semantic agent status when integrations are installed, and activates the selected pane.
 
+It exists because I live in the terminal. I already know how to use tmux, and I do not want a second dashboard trying to reinvent window management with worse keybindings and more JavaScript furniture. Watcher is the missing switchboard: keep agents running where they already are, see which ones need attention, preview enough context to pick the right one, then jump straight back into tmux.
+
 ![Watcher terminal preview](docs/assets/watcher-terminal-preview.png)
 
 ## Highlights
