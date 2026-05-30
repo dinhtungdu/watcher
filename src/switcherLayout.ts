@@ -141,7 +141,7 @@ function headerLines(width: number, groups: RepoGroup[], layout: LayoutMode, use
   const worktreeCount = groups.reduce((count, repo) => count + repo.worktrees.length, 0);
   const paneCount = selectablePanes(groups).length;
   return [
-    fit(`${bold('Watcher', useColor)} ${dim(`${groups.length} repos · ${worktreeCount} worktrees · ${paneCount} actionable Agent Panes · repo > worktree/branch > sessions · ${layout}`, useColor)}`, width, useColor),
+    fit(`${bold('Watcher', useColor)} ${dim(`${groups.length} repos · ${worktreeCount} worktrees · ${paneCount} non-terminated sessions · repo > worktree/branch > sessions · ${layout}`, useColor)}`, width, useColor),
     fit(dim(line(width), useColor), width, useColor),
   ];
 }
@@ -163,7 +163,6 @@ function emptyLines(snapshot: SwitcherSnapshot, width: number, height: number, u
     reason,
     help,
     '',
-    dim('q / Esc / Ctrl-C quits', useColor),
   ];
   const topPad = Math.max(0, Math.floor((height - body.length) / 2));
   return [...Array.from({ length: topPad }, () => ''), ...body].slice(0, height).map((value) => fit(value, width, useColor));
@@ -230,18 +229,16 @@ function detailContent(pane: AgentPane, now: number, home?: string): string[] {
   const group = paneGroup(pane, home);
   return [
     'Now',
-    `status    ${pane.status}`,
-    `agent     ${pane.agentType}`,
-    `updated   ${formatAge(ageSeconds(pane, now))}`,
+    `${statusDot(pane.status, false)} ${pane.agentType} · ${pane.status} · ${formatAge(ageSeconds(pane, now))}`,
     '',
     group.isGit ? 'Git worktree' : 'Path fallback',
     group.isGit ? `repo      ${group.repoTitle}` : `path      ${shortPath(group.path, home)}`,
     group.isGit ? `branch    ${group.branch}` : 'no repo/branch metadata',
     group.isGit ? `worktree  ${shortPath(group.path, home)}` : '',
     '',
-    `summary   ${pane.summary || '(no summary yet)'}`,
-    pane.currentAction ? `action    ${pane.currentAction}` : '',
-    pane.lastMessage ? `message   ${pane.lastMessage}` : '',
+    pane.summary || '(no summary yet)',
+    pane.currentAction || pane.lastMessage || '',
+    pane.currentAction && pane.lastMessage ? pane.lastMessage : '',
     '',
     'Open',
     tmuxTarget(pane),
@@ -271,18 +268,28 @@ function renderWide(groups: RepoGroup[], width: number, height: number, layout: 
   return Array.from({ length: height }, (_, index) => `${fit(left[index] || '', leftWidth, useColor)} ${dim('│', useColor)} ${fit(right[index] || '', rightWidth, useColor)}`);
 }
 
+function stateModeLabel(layout: LayoutMode): string {
+  return `${layout}:auto`;
+}
+
 function helpLines(width: number, layout: LayoutMode, selectedPane: AgentPane | undefined, useColor: boolean, home?: string): string[] {
   const keys = width < 72 ? '↑/↓ select · enter activate · q quit' : '↑/↓ or j/k select · enter activate · q quit';
   if (layout === 'wide' || !selectedPane) return [fit(dim(line(width), useColor), width, useColor), fit(dim(keys, useColor), width, useColor)];
   const group = paneGroup(selectedPane, home);
   const label = group.isGit ? `${group.repoTitle} · ${group.branch} · ${shortPath(group.path, home)}` : `${shortPath(group.path, home)}`;
-  const context = `${selectedPane.id} ${tmuxTarget(selectedPane)} · ${selectedPane.agentType} · ${selectedPane.status} · ${label}`;
+  const mode = stateModeLabel(layout);
+  const selectedState = `${selectedPane.id} ${tmuxTarget(selectedPane)} · ${selectedPane.agentType} · ${selectedPane.status} · ${label} · ${mode}`;
   return [
     fit(dim(line(width), useColor), width, useColor),
-    fit(`${bold('selected', useColor)} ${selectedPane.summary || '(no summary yet)'}`, width, useColor),
-    fit(dim(context, useColor), width, useColor),
+    fit(`${bold('selected', useColor)} ${selectedState}`, width, useColor),
     fit(dim(keys, useColor), width, useColor),
   ];
+}
+
+function finalizeFrame(lines: string[], width: number, height: number, useColor: boolean): string[] {
+  const frame = lines.slice(0, height).map((value) => fit(value, width, useColor));
+  while (frame.length < height) frame.push(' '.repeat(width));
+  return frame;
 }
 
 export function renderSwitcherFrame(snapshot: SwitcherSnapshot, width: number, height: number, state: SwitcherRenderState = {}): string[] {
@@ -296,7 +303,7 @@ export function renderSwitcherFrame(snapshot: SwitcherSnapshot, width: number, h
   if (groups.length === 0) {
     const help = [fit(dim(line(width), useColor), width, useColor), fit(dim('q / Esc / Ctrl-C quits', useColor), width, useColor)];
     const body = emptyLines(snapshot, width, Math.max(1, height - header.length - help.length), useColor);
-    return [...header, ...body, ...help].slice(0, height).map((value) => fit(value, width, useColor));
+    return finalizeFrame([...header, ...body, ...help], width, height, useColor);
   }
   const panes = selectablePanes(groups);
   const selectedPaneId = panes.some((pane) => pane.id === state.selectedPaneId) ? state.selectedPaneId! : panes[0]!.id;
@@ -307,5 +314,5 @@ export function renderSwitcherFrame(snapshot: SwitcherSnapshot, width: number, h
   const body = layout === 'wide'
     ? renderWide(groups, width, bodyHeight, layout, state, selectedPaneId, now)
     : pagedList(groups, width, bodyHeight, layout, state, selectedPaneId);
-  return [...header, ...body, ...help].slice(0, height).map((value) => fit(value, width, useColor));
+  return finalizeFrame([...header, ...body, ...help], width, height, useColor);
 }

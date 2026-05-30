@@ -41,9 +41,7 @@ test('prompt-submit records a working Pi Agent Pane with git/tmux context', asyn
   assert.match(frame, /watcher/);
   assert.match(frame, /main ~\/work\/watcher/);
   assert.match(frame, /● pi\s+Implement the daemon snapshot API/);
-  assert.match(frame, /status\s+working/);
-  assert.match(frame, /agent\s+pi/);
-  assert.match(frame, /updated\s+10s/);
+  assert.match(frame, /● pi · working · 10s/);
   assert.match(frame, /main:1\.2 \(%42\)/);
 });
 

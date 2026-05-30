@@ -52,25 +52,24 @@ test('selected row uses full-width reverse highlight without hardcoded color', (
 test('wide layout has rich right detail pane', () => {
   const frame = renderSwitcherFrame({ panes, daemonAvailable: true, tmuxAvailable: true, now }, 130, 24, { useColor: false, home: '/Users/tung', selectedPaneId: '%2' }).join('\n');
   assert.match(frame, /details/);
-  assert.match(frame, /status\s+needs_input/);
-  assert.match(frame, /agent\s+pi/);
+  assert.match(frame, /● pi · needs_input · 5s/);
   assert.match(frame, /repo\s+watcher/);
   assert.match(frame, /branch\s+feature\/tui/);
   assert.match(frame, /worktree\s+~\/work\/watcher-feature/);
-  assert.match(frame, /summary\s+Needs decision/);
-  assert.match(frame, /action\s+waiting for approval/);
-  assert.match(frame, /message\s+Please pick one\./);
+  assert.match(frame, /Needs decision/);
+  assert.match(frame, /waiting for approval/);
+  assert.match(frame, /Please pick one\./);
   assert.match(frame, /s:1\.1 \(%2\)/);
-  assert.match(frame, /updated\s+5s/);
+  assert.match(frame, /needs_input · 5s/);
 });
 
 test('medium and narrow layouts collapse to list-first selected summary', () => {
   const medium = renderSwitcherFrame({ panes, daemonAvailable: true, tmuxAvailable: true, now }, 90, 18, { useColor: false, home: '/Users/tung', selectedPaneId: '%2' }).join('\n');
   const narrow = renderSwitcherFrame({ panes, daemonAvailable: true, tmuxAvailable: true, now }, 60, 18, { useColor: false, home: '/Users/tung', selectedPaneId: '%2' }).join('\n');
   assert.doesNotMatch(medium, /details/);
-  assert.match(medium, /selected Needs decision/);
+  assert.match(medium, /selected %2 s:1\.1 \(%2\) · pi · needs_input/);
   assert.doesNotMatch(narrow, /details/);
-  assert.match(narrow, /selected Needs decision/);
+  assert.match(narrow, /selected %2 s:1\.1 \(%2\) · pi · needs_input/);
 });
 
 test('keyboard selection helper supports j/k style movement over rows only', () => {
