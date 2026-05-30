@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-import { runOpenTuiSwitcher } from './opentuiShell.js';
+import { runAnsiSwitcher } from './ansiShell.js';
 import { loadSwitcherSnapshot } from './snapshot.js';
 import { renderSwitcherFrame } from './switcherLayout.js';
 import { stripAnsi } from './text.js';
@@ -61,7 +61,7 @@ export async function main(argv = process.argv.slice(2)): Promise<number> {
     return 0;
   }
 
-  await runOpenTuiSwitcher();
+  await runAnsiSwitcher();
   return 0;
 }
 

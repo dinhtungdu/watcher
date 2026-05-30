@@ -11,7 +11,7 @@ function terminalSize(): { width: number; height: number } {
   };
 }
 
-export async function runOpenTuiSwitcher(): Promise<void> {
+export async function runAnsiSwitcher(): Promise<void> {
   // Render the accepted prototype-style ANSI frame directly under Bun.
   let state: SwitcherRenderState = {
     useColor: Boolean(process.stdout.isTTY && !process.env.NO_COLOR),
