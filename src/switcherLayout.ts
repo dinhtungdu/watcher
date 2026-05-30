@@ -287,9 +287,11 @@ function spacedSections(sections: string[][]): string[] {
 
 function detailContent(pane: AgentPane, now: number, home: string | undefined, width: number, useColor: boolean): string[] {
   const group = paneGroup(pane, home);
-  const summary = singleLine(pane.summary || '(no summary yet)').trim();
   const lastMessage = singleLine(pane.lastMessage ?? '').trim();
-  const showSummary = summary && !isDuplicateDetailText(summary, lastMessage ? [lastMessage] : []);
+  const fallbackSummary = singleLine(pane.summary || '(no summary yet)').trim();
+  const userMessage = singleLine(pane.userMessage ?? '').trim();
+  const summary = userMessage || fallbackSummary;
+  const showSummary = summary && (userMessage || !isDuplicateDetailText(summary, lastMessage ? [lastMessage] : []));
   const messageWidth = Math.max(12, width - 4);
   const taskLines = showSummary ? wrapText(summary, messageWidth, 4).map((value) => `${bold('▸', useColor)} ${value}`) : [];
   const assistantLines = uniqueDetailText([lastMessage, pane.currentAction])

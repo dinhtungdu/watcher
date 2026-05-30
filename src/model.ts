@@ -37,6 +37,7 @@ export interface AgentPane {
   agentType: string;
   status: AgentStatus;
   summary: string;
+  userMessage?: string;
   currentAction?: string;
   lastMessage?: string;
   target: TerminalTarget;

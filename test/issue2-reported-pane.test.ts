@@ -33,6 +33,7 @@ test('prompt-submit records a working Pi Agent Pane with git/tmux context', asyn
   assert.equal(pane.status, 'working');
   assert.equal(pane.agentType, 'pi');
   assert.equal(pane.summary, 'Implement the daemon snapshot API');
+  assert.equal(pane.userMessage, 'Implement the daemon snapshot API');
   assert.equal(pane.target.backend, 'tmux');
   assert.equal(pane.target.backend === 'tmux' && pane.target.sessionName, 'main');
   assert.equal(pane.cwd, '/Users/tung/work/watcher');
@@ -63,6 +64,7 @@ test('stop event changes pane to idle and keeps the running agent visible', asyn
   const pane = snapshot.panes[0]!;
   assert.equal(pane.status, 'idle');
   assert.equal(pane.summary, 'Visible task');
+  assert.equal(pane.userMessage, 'Visible task');
   assert.equal(pane.lastMessage, 'Done');
   const frame = renderSwitcherFrame(snapshot, 130, 18, { useColor: false }).join('\n');
   assert.match(frame, /▸ Visible task/);

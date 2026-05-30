@@ -66,6 +66,7 @@ export async function normalizeHookEvent(input: HookEventInput, runner: CommandR
     status,
     reportedStatus: status === 'stalled' ? 'working' : status,
     summary,
+    userMessage: prompt,
     currentAction: action,
     lastMessage,
     target: tmux,
