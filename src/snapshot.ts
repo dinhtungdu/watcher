@@ -3,6 +3,7 @@ import { CommandRunner, hasTmuxServer, nodeCommandRunner } from './tmux.js';
 import { sendDaemonRequest } from './ipc.js';
 import { discoverUnhookedPanes, mergeDaemonAndDiscovered } from './discovery.js';
 import { deriveStalledStatuses, StallTracker } from './stalled.js';
+import { normalizeAgentPaneTarget } from './terminalTarget.js';
 
 export interface SnapshotOptions {
   runner?: CommandRunner;
@@ -18,7 +19,12 @@ export async function loadSwitcherSnapshot(options: SnapshotOptions = {}): Promi
   let daemonSnapshot: SwitcherSnapshot | undefined;
   try {
     const response = await sendDaemonRequest({ type: 'snapshot' }, { timeoutMs: 300, socketPath: options.socketPath });
-    if (response.ok && response.snapshot) daemonSnapshot = response.snapshot;
+    if (response.ok && response.snapshot) {
+      daemonSnapshot = {
+        ...response.snapshot,
+        panes: response.snapshot.panes.map((pane) => normalizeAgentPaneTarget(pane)).filter((pane) => pane !== undefined),
+      };
+    }
   } catch {
     // No daemon yet; render an honest empty state instead of faceplanting like a fragile dashboard goblin.
   }

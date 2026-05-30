@@ -1,6 +1,6 @@
 import path from 'node:path';
 import { AgentPane, TmuxTarget } from './model.js';
-import { terminalTargetCommand, terminalTargetCwd, terminalTargetPid } from './terminalTarget.js';
+import { normalizeAgentPaneTarget, terminalTargetCommand, terminalTargetCwd, terminalTargetPid } from './terminalTarget.js';
 import { CommandRunner, nodeCommandRunner } from './tmux.js';
 import { listTmuxPanes } from './tmuxContext.js';
 import { discoverGitMetadata } from './git.js';
@@ -84,8 +84,10 @@ export async function discoverUnhookedPanes(runner: CommandRunner = nodeCommandR
 export function mergeDaemonAndDiscovered(daemonPanes: AgentPane[], discovered: AgentPane[], livePaneIds: Set<string>): AgentPane[] {
   const result = new Map<string, AgentPane>();
   for (const pane of daemonPanes) {
-    if (livePaneIds.size > 0 && !livePaneIds.has(pane.id)) continue;
-    result.set(pane.id, pane);
+    const normalized = normalizeAgentPaneTarget(pane);
+    if (!normalized) continue;
+    if (livePaneIds.size > 0 && !livePaneIds.has(normalized.id)) continue;
+    result.set(normalized.id, normalized);
   }
   for (const pane of discovered) {
     if (!result.has(pane.id)) result.set(pane.id, pane);

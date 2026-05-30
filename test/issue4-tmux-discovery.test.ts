@@ -83,3 +83,21 @@ test('merge hides daemon ghost panes and keeps hooked status over discovery', as
   assert.equal(merged.find((pane) => pane.id === '%1')?.summary, 'Hook status wins');
   assert.equal(merged.find((pane) => pane.id === '%1')?.status, 'working');
 });
+
+test('merge tolerates legacy daemon panes that still use tmux field', async () => {
+  const result = await discoverUnhookedPanes(discoveryRunner(), 1_700_000_000_000);
+  const legacyHooked = {
+    id: '%1',
+    agentType: 'pi',
+    status: 'working',
+    summary: 'Legacy daemon snapshot',
+    tmux: result.panes[0]!.target,
+    cwd: result.panes[0]!.cwd,
+    git: result.panes[0]!.git,
+    updatedAt: 1_700_000_005_000,
+  } as unknown as AgentPane;
+  const merged = mergeDaemonAndDiscovered([legacyHooked], result.panes, result.paneIds);
+  assert.equal(merged[0]!.target.paneId, '%1');
+  const frame = renderSwitcherFrame({ panes: merged, daemonAvailable: true, tmuxAvailable: true, now: 1_700_000_010_000 }, 120, 24, { useColor: false, home: '/Users/tung' }).join('\n');
+  assert.match(frame, /Legacy daemon snapshot/);
+});

@@ -39,6 +39,15 @@ export function tmuxTarget(fields: Omit<TmuxTarget, 'backend' | 'id'> & { id?: s
   };
 }
 
+type LegacyAgentPane = Omit<AgentPane, 'target'> & { target?: TerminalTarget; tmux?: TmuxTarget };
+
+export function normalizeAgentPaneTarget(pane: AgentPane | LegacyAgentPane): AgentPane | undefined {
+  const candidate = pane as LegacyAgentPane;
+  if (candidate.target) return candidate as AgentPane;
+  if (candidate.tmux) return { ...candidate, target: tmuxTarget(candidate.tmux) } as AgentPane;
+  return undefined;
+}
+
 export function paneTargetLabel(pane: AgentPane): string {
   return terminalTargetLabel(pane.target);
 }
