@@ -108,6 +108,36 @@ export function applyAgentEvent(previous: AgentPane | undefined, input: WatcherA
   const pane = basePane(previous, input, context, status);
   const payload = input.payload;
 
+  if (previous?.status === 'idle') {
+    if (input.type === 'assistant-message') {
+      const text = payload.text!;
+      return {
+        ...pane,
+        status: 'idle',
+        reportedStatus: 'idle',
+        summary: previous.summary,
+        userMessage: previous.userMessage,
+        lastMessage: text,
+        pendingAssistantMessage: undefined,
+        activityItems: undefined,
+        currentAction: undefined,
+      };
+    }
+    if (input.type !== 'session-started' && input.type !== 'user-message' && input.type !== 'needs-input' && input.type !== 'error') {
+      return {
+        ...pane,
+        status: 'idle',
+        reportedStatus: 'idle',
+        summary: previous.summary,
+        userMessage: previous.userMessage,
+        lastMessage: previous.lastMessage,
+        pendingAssistantMessage: undefined,
+        activityItems: undefined,
+        currentAction: undefined,
+      };
+    }
+  }
+
   switch (input.type) {
     case 'session-started':
       return {
