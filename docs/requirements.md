@@ -4,11 +4,13 @@ Watcher is a tmux-wide Agent Switcher. It lists running agent panes across all l
 
 ## Scope
 
-- Local tmux only.
+- Local terminal backends only.
+- tmux is the first full backend for discovery, hook identity, stalled detection, and activation.
+- Ghostty macOS support uses Ghostty's AppleScript scripting dictionary for activation when a Ghostty terminal surface is known; unhooked Ghostty discovery is out of MVP until stable Ghostty exposes enough process metadata.
 - Bun/TypeScript CLI named `watcher`.
 - Prototype-aligned terminal switcher UI rendered by the Bun CLI.
 - In-memory Watcher Daemon.
-- Explicit hooks where supported; tmux/process/title/output fallback while the TUI is open.
+- Explicit hooks where supported; backend/process/title/output fallback while the TUI is open.
 
 ## Commands
 
@@ -89,23 +91,26 @@ Status priority:
 
 Within the same highest-priority status, newest update first.
 
-## Tmux Discovery
+## Backend Discovery
 
-While the switcher is open:
+While the switcher is open, tmux discovery should:
 
 - poll `tmux list-panes -a` every 2 seconds
 - detect known agent processes by pane command and one-level process tree scan from `pane_pid`
 - capture pane tail/hash for candidate agent panes only
 - derive `stalled` when status is `working` and no hook/title/output change for 5 minutes
 
-No ghost panes: if tmux pane no longer exists, hide it.
+Ghostty discovery is hook-first for MVP. A known Ghostty terminal surface may be activated through the macOS scripting dictionary, but Watcher does not promise unhooked Ghostty process discovery until stable Ghostty exposes foreground PID/TTY or an equivalent non-AppleScript control API.
+
+No ghost panes: if a backend surface no longer exists, hide it.
 
 ## Activation
 
-- Inside tmux: switch client to target session, select target window, select target pane.
-- Outside tmux: select target window/pane first, then attach to target session.
-- Use tmux pane ids like `%42`.
-- Exit TUI before activation/attach.
+- tmux inside tmux: switch client to target session, select target window, select target pane.
+- tmux outside tmux: select target window/pane first, then attach to target session.
+- Ghostty on macOS: use AppleScript to focus the target terminal surface.
+- Use backend-local target ids, such as tmux pane ids like `%42` or Ghostty terminal surface ids.
+- Exit TUI before activation/attach/focus.
 
 ## Hooks
 
@@ -148,6 +153,7 @@ Installer:
 ## Non-goals MVP
 
 - remote SSH/tmux relay
+- unhooked Ghostty process discovery before stable foreground PID/TTY support
 - session resume/restore
 - history database
 - unread/dismiss workflow

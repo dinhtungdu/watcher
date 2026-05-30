@@ -1,4 +1,5 @@
 import { TmuxTarget } from './model.js';
+import { tmuxTarget } from './terminalTarget.js';
 import { CommandRunner, nodeCommandRunner } from './tmux.js';
 
 const PANE_FORMAT = [
@@ -21,15 +22,15 @@ export async function listTmuxPanes(runner: CommandRunner = nodeCommandRunner): 
 export async function getTmuxPane(paneId: string, runner: CommandRunner = nodeCommandRunner): Promise<TmuxTarget> {
   try {
     const panes = await listTmuxPanes(runner);
-    return panes.find((pane) => pane.paneId === paneId) ?? { paneId };
+    return panes.find((pane) => pane.paneId === paneId) ?? tmuxTarget({ paneId });
   } catch {
-    return { paneId };
+    return tmuxTarget({ paneId });
   }
 }
 
 function parsePaneLine(line: string): TmuxTarget {
   const [paneId, sessionName, windowIndex, paneIndex, paneCurrentPath, panePid, paneCurrentCommand, windowName, paneTitle] = line.split('\t');
-  return {
+  return tmuxTarget({
     paneId,
     sessionName,
     windowIndex,
@@ -39,5 +40,5 @@ function parsePaneLine(line: string): TmuxTarget {
     paneCurrentCommand,
     windowName,
     paneTitle,
-  };
+  });
 }

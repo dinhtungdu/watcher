@@ -2,6 +2,7 @@ import { test } from 'bun:test';
 import assert from 'node:assert/strict';
 import { AgentPane } from '../src/model.js';
 import { groupPanes, moveSelection, renderSwitcherFrame, selectablePanes } from '../src/switcherLayout.js';
+import { tmuxTarget } from '../src/terminalTarget.js';
 import { stripAnsi, visibleLength } from '../src/text.js';
 
 const now = 1_700_000_000_000;
@@ -9,7 +10,7 @@ const now = 1_700_000_000_000;
 function pane(overrides: Partial<AgentPane> & Pick<AgentPane, 'id' | 'status' | 'summary'>): AgentPane {
   return {
     agentType: 'pi',
-    tmux: { paneId: overrides.id, sessionName: 's', windowIndex: '1', paneIndex: '1', paneCurrentPath: '/repo' },
+    target: tmuxTarget({ paneId: overrides.id, sessionName: 's', windowIndex: '1', paneIndex: '1', paneCurrentPath: '/repo' }),
     cwd: '/repo',
     updatedAt: now,
     ...overrides,

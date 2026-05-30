@@ -4,6 +4,7 @@ import { AgentPane } from '../src/model.js';
 import { CommandRunner } from '../src/tmux.js';
 import { createStallTracker, deriveStalledStatuses } from '../src/stalled.js';
 import { renderSwitcherFrame } from '../src/switcherLayout.js';
+import { tmuxTarget } from '../src/terminalTarget.js';
 
 function pane(id: string, status: AgentPane['status'], updatedAt: number, summary = id): AgentPane {
   return {
@@ -11,7 +12,7 @@ function pane(id: string, status: AgentPane['status'], updatedAt: number, summar
     agentType: 'pi',
     status,
     summary,
-    tmux: { paneId: id, sessionName: 's', windowIndex: '0', paneIndex: id.slice(1), paneCurrentPath: '/repo', paneTitle: 'title' },
+    target: tmuxTarget({ paneId: id, sessionName: 's', windowIndex: '0', paneIndex: id.slice(1), paneCurrentPath: '/repo', paneTitle: 'title' }),
     cwd: '/repo',
     git: { repo: 'repo', branch: 'main', worktreePath: '/repo' },
     updatedAt,

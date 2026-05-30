@@ -72,7 +72,7 @@ test('merge hides daemon ghost panes and keeps hooked status over discovery', as
     agentType: 'pi',
     status: 'working',
     summary: 'Hook status wins',
-    tmux: result.panes[0]!.tmux,
+    target: result.panes[0]!.target,
     cwd: result.panes[0]!.cwd,
     git: result.panes[0]!.git,
     updatedAt: 1_700_000_005_000,

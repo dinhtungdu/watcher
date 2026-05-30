@@ -2,6 +2,7 @@ import { AgentPane, AgentStatus } from './model.js';
 import { CommandRunner, nodeCommandRunner } from './tmux.js';
 import { getTmuxPane } from './tmuxContext.js';
 import { discoverGitMetadata } from './git.js';
+import { terminalTargetCwd } from './terminalTarget.js';
 
 export interface HookEventInput {
   agent: string;
@@ -49,7 +50,7 @@ function summarize(value: string | undefined, fallback: string): string {
 export async function normalizeHookEvent(input: HookEventInput, runner: CommandRunner = nodeCommandRunner): Promise<AgentPane> {
   const status = mapEventToStatus(input.event);
   const tmux = await getTmuxPane(input.paneId, runner);
-  const cwd = payloadString(input.payload, ['cwd']) ?? tmux.paneCurrentPath;
+  const cwd = payloadString(input.payload, ['cwd']) ?? terminalTargetCwd(tmux);
   const git = await discoverGitMetadata(cwd, runner);
   const prompt = payloadString(input.payload, ['prompt', 'message', 'summary']);
   const lastMessage = payloadString(input.payload, ['lastAssistantMessage', 'last_message', 'lastMessage']);
@@ -67,7 +68,7 @@ export async function normalizeHookEvent(input: HookEventInput, runner: CommandR
     summary,
     currentAction: action,
     lastMessage,
-    tmux,
+    target: tmux,
     cwd,
     git,
     updatedAt: input.now ?? Date.now(),

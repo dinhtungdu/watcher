@@ -1,5 +1,6 @@
 import { AgentPane, AgentStatus, STATUS_RANK, SwitcherSnapshot, isRunningAgentStatus } from './model.js';
 import { activationTargetLabel } from './activation.js';
+import { terminalTargetCwd } from './terminalTarget.js';
 import { basename, bold, dim, fit, formatAge, line, selected, shortPath } from './text.js';
 
 export type LayoutMode = 'narrow' | 'medium' | 'wide';
@@ -69,7 +70,7 @@ function paneGroup(pane: AgentPane, home?: string): PaneGroupInfo {
       isGit: true,
     };
   }
-  const path = pane.cwd || pane.tmux.paneCurrentPath || '(unknown path)';
+  const path = pane.cwd || terminalTargetCwd(pane.target) || '(unknown path)';
   return {
     repoKey: 'path-fallback',
     repoTitle: 'Path fallback',

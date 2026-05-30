@@ -1,6 +1,18 @@
 export type AgentStatus = 'working' | 'needs_input' | 'stalled' | 'unknown' | 'idle';
 
-export interface TmuxTarget {
+export type TerminalBackend = 'tmux' | 'ghostty';
+
+export interface BaseTerminalTarget {
+  backend: TerminalBackend;
+  id: string;
+  cwd?: string;
+  title?: string;
+  pid?: number;
+  currentCommand?: string;
+}
+
+export interface TmuxTarget extends BaseTerminalTarget {
+  backend: 'tmux';
   paneId: string;
   sessionName?: string;
   windowIndex?: string;
@@ -11,6 +23,19 @@ export interface TmuxTarget {
   windowName?: string;
   paneTitle?: string;
 }
+
+export interface GhosttyTarget extends BaseTerminalTarget {
+  backend: 'ghostty';
+  terminalId: string;
+  windowId?: string;
+  tabId?: string;
+  windowName?: string;
+  tabName?: string;
+  terminalTitle?: string;
+  tty?: string;
+}
+
+export type TerminalTarget = TmuxTarget | GhosttyTarget;
 
 export interface GitMetadata {
   repo: string;
@@ -25,7 +50,7 @@ export interface AgentPane {
   summary: string;
   currentAction?: string;
   lastMessage?: string;
-  tmux: TmuxTarget;
+  target: TerminalTarget;
   cwd?: string;
   git?: GitMetadata;
   updatedAt: number;

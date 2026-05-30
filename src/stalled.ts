@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import { AgentPane } from './model.js';
+import { terminalTargetTitle } from './terminalTarget.js';
 import { CommandRunner, nodeCommandRunner } from './tmux.js';
 
 export const DEFAULT_STALLED_MS = 5 * 60 * 1000;
@@ -36,7 +37,7 @@ export interface StalledOptions {
 }
 
 function observedTitle(pane: AgentPane): string | undefined {
-  return pane.tmux.paneTitle || pane.tmux.windowName;
+  return terminalTargetTitle(pane.target);
 }
 
 export async function deriveStalledStatuses(panes: AgentPane[], options: StalledOptions = {}): Promise<AgentPane[]> {
@@ -63,7 +64,7 @@ export async function deriveStalledStatuses(panes: AgentPane[], options: Stalled
       continue;
     }
 
-    const outputHash = await capturePaneTailHash(pane.id, runner);
+    const outputHash = pane.target.backend === 'tmux' ? await capturePaneTailHash(pane.target.paneId, runner) : undefined;
     const title = observedTitle(pane);
     const previous = tracker.entries.get(pane.id);
     let entry: StallEntry = previous ?? {

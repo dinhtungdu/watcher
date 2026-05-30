@@ -1,5 +1,6 @@
 import path from 'node:path';
 import { AgentPane, TmuxTarget } from './model.js';
+import { terminalTargetCommand, terminalTargetCwd, terminalTargetPid } from './terminalTarget.js';
 import { CommandRunner, nodeCommandRunner } from './tmux.js';
 import { listTmuxPanes } from './tmuxContext.js';
 import { discoverGitMetadata } from './git.js';
@@ -44,9 +45,9 @@ async function childProcessCommands(parentPid: number | undefined, runner: Comma
 }
 
 export async function detectKnownAgent(pane: TmuxTarget, runner: CommandRunner = nodeCommandRunner): Promise<string | undefined> {
-  const direct = knownAgentFromCommand(pane.paneCurrentCommand);
+  const direct = knownAgentFromCommand(terminalTargetCommand(pane));
   if (direct) return direct;
-  for (const command of await childProcessCommands(pane.panePid, runner)) {
+  for (const command of await childProcessCommands(terminalTargetPid(pane), runner)) {
     const child = knownAgentFromCommand(command);
     if (child) return child;
   }
@@ -64,14 +65,14 @@ export async function discoverUnhookedPanes(runner: CommandRunner = nodeCommandR
   for (const tmux of panes) {
     const agentType = await detectKnownAgent(tmux, runner);
     if (!agentType) continue;
-    const cwd = tmux.paneCurrentPath;
+    const cwd = terminalTargetCwd(tmux);
     discovered.push({
       id: tmux.paneId,
       agentType,
       status: 'unknown',
       summary: `Detected ${agentType} process without Watcher hook status`,
       currentAction: 'tmux/process discovery fallback',
-      tmux,
+      target: tmux,
       cwd,
       git: await discoverGitMetadata(cwd, runner),
       updatedAt: now,

@@ -33,7 +33,8 @@ test('prompt-submit records a working Pi Agent Pane with git/tmux context', asyn
   assert.equal(pane.status, 'working');
   assert.equal(pane.agentType, 'pi');
   assert.equal(pane.summary, 'Implement the daemon snapshot API');
-  assert.equal(pane.tmux.sessionName, 'main');
+  assert.equal(pane.target.backend, 'tmux');
+  assert.equal(pane.target.backend === 'tmux' && pane.target.sessionName, 'main');
   assert.equal(pane.cwd, '/Users/tung/work/watcher');
   assert.deepEqual(pane.git, { repo: 'watcher', branch: 'main', worktreePath: '/Users/tung/work/watcher' });
 

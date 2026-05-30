@@ -5,7 +5,7 @@ Watcher helps a user observe running agent sessions and jump to the relevant wor
 ## Language
 
 **Agent Pane**:
-An interactive workspace running an agent session that Watcher can surface and activate. Agent Panes can be discovered across all tmux sessions and are identified by the tmux pane id.
+An interactive workspace running an agent session that Watcher can surface and activate. Agent Panes are identified by a Terminal Backend and that backend's local surface identity.
 _Avoid_: Agent activity, agent shell, bot pane
 
 **Agent Status**:
@@ -21,7 +21,7 @@ An Agent Pane that appears to be working but has had no output or status change 
 _Avoid_: Stuck agent
 
 **Status Hook**:
-An explicit integration installed into a supported agent so it can report Agent Status for the current tmux pane.
+An explicit integration installed into a supported agent so it can report Agent Status for the current Agent Pane.
 _Avoid_: Silent hook, auto hook
 
 **Repo Group**:
@@ -36,8 +36,12 @@ _Avoid_: Branch group, session group
 A collection of Agent Panes grouped by path when Watcher cannot determine repository and worktree identity.
 _Avoid_: Unknown repo, ungrouped panes
 
+**Terminal Backend**:
+A local terminal environment that can discover, identify, and activate Agent Panes. tmux and Ghostty are Terminal Backends.
+_Avoid_: Provider, terminal type, transport
+
 **Running Agent Pane**:
-An Agent Pane whose tmux pane still exists and is running a known or hooked agent process. Running Agent Panes are shown regardless of Agent Status, including `idle`.
+An Agent Pane whose Terminal Backend surface still exists and is running a known or hooked agent process. Running Agent Panes are shown regardless of Agent Status, including `idle`.
 _Avoid_: Non-terminated agent pane, active-only session, actionable-only pane
 
 **Agent Pane Activation**:
