@@ -61,7 +61,7 @@ A local terminal environment that can discover, identify, and activate Agent Pan
 _Avoid_: Provider, terminal type, transport
 
 **Running Agent Pane**:
-An Agent Pane whose Terminal Backend surface still exists and is running a known agent process or has reported through an Agent Event Source. Running Agent Panes are shown regardless of Agent Status, including `idle`.
+An Agent Pane whose Terminal Backend surface still exists and is running a known agent process. Agent Event Sources provide Agent Status and activity for Running Agent Panes, but stale daemon history alone is not liveness: if tmux is available and the known agent process is gone, the Agent Pane is no longer running even if its shell pane remains. Running Agent Panes are shown regardless of Agent Status, including `idle`.
 _Avoid_: Non-terminated agent pane, active-only session, actionable-only pane
 
 **Agent Pane Activation**:

@@ -1,16 +1,16 @@
 import { AgentPane, TmuxTarget } from './model.js';
 import { detectAgentFromProcess, getAgentIntegration } from './agents/registry.js';
 import { canonicalSurfaceKey, surfaceFromTarget } from './surfaceIdentity.js';
-import { normalizeAgentPaneTarget, terminalTargetCommand, terminalTargetCwd, terminalTargetPid } from './terminalTarget.js';
+import { terminalTargetCommand, terminalTargetCwd, terminalTargetPid } from './terminalTarget.js';
 import { CommandRunner, nodeCommandRunner } from './tmux.js';
 import { captureTmuxPanePreview, listTmuxPanes } from './tmuxContext.js';
 import { discoverGitMetadata } from './git.js';
 
-export interface DiscoveryResult {
+export interface TerminalAgentObservation {
   tmuxAvailable: boolean;
-  paneIds: Set<string>;
-  agentPaneIds: Set<string>;
-  panes: AgentPane[];
+  livePaneIds: Set<string>;
+  liveAgentProcessPaneIds: Set<string>;
+  discoveredPanes: AgentPane[];
 }
 
 async function childProcessCommands(parentPid: number | undefined, runner: CommandRunner): Promise<string[]> {
@@ -42,12 +42,12 @@ export async function detectKnownAgent(pane: TmuxTarget, runner: CommandRunner =
   return undefined;
 }
 
-export async function discoverUnintegratedPanes(runner: CommandRunner = nodeCommandRunner, now = Date.now()): Promise<DiscoveryResult> {
+export async function observeTerminalAgentPanes(runner: CommandRunner = nodeCommandRunner, now = Date.now()): Promise<TerminalAgentObservation> {
   let panes: TmuxTarget[];
   try {
     panes = await listTmuxPanes(runner);
   } catch {
-    return { tmuxAvailable: false, paneIds: new Set(), agentPaneIds: new Set(), panes: [] };
+    return { tmuxAvailable: false, livePaneIds: new Set(), liveAgentProcessPaneIds: new Set(), discoveredPanes: [] };
   }
   const discovered: AgentPane[] = [];
   for (const tmux of panes) {
@@ -78,30 +78,8 @@ export async function discoverUnintegratedPanes(runner: CommandRunner = nodeComm
   }
   return {
     tmuxAvailable: true,
-    paneIds: new Set(panes.map((pane) => canonicalSurfaceKey(surfaceFromTarget(pane)))),
-    agentPaneIds: new Set(discovered.map((pane) => pane.id)),
-    panes: discovered,
+    livePaneIds: new Set(panes.map((pane) => canonicalSurfaceKey(surfaceFromTarget(pane)))),
+    liveAgentProcessPaneIds: new Set(discovered.map((pane) => pane.id)),
+    discoveredPanes: discovered,
   };
-}
-
-export function mergeDaemonAndDiscovered(
-  daemonPanes: AgentPane[],
-  discovered: AgentPane[],
-  livePaneIds: Set<string>,
-  tmuxAvailable: boolean,
-  liveAgentPaneIds: Set<string> = new Set(discovered.map((pane) => pane.id)),
-): AgentPane[] {
-  const result = new Map<string, AgentPane>();
-  for (const pane of daemonPanes) {
-    const normalized = normalizeAgentPaneTarget(pane);
-    if (!normalized) continue;
-    if (tmuxAvailable && !livePaneIds.has(normalized.id)) continue;
-    if (tmuxAvailable && normalized.status === 'idle' && !liveAgentPaneIds.has(normalized.id)) continue;
-    result.set(normalized.id, normalized);
-  }
-  for (const pane of discovered) {
-    const normalized = normalizeAgentPaneTarget(pane);
-    if (normalized && !result.has(normalized.id)) result.set(normalized.id, normalized);
-  }
-  return [...result.values()];
 }
