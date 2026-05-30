@@ -89,6 +89,18 @@ test('details pane does not repeat identical summary and last message', () => {
   assert.equal(frame.match(/same assistant final answer/g)?.length, 2);
 });
 
+test('details pane does not repeat truncated summary and full last message', () => {
+  const full = 'This is a very long assistant final answer that should only appear once in details even when the idle summary was made from a truncated version of the same text.';
+  const repeated = [pane({
+    id: '%9',
+    status: 'idle',
+    summary: `${full.slice(0, 80)}…`,
+    lastMessage: full,
+  })];
+  const frame = renderSwitcherFrame({ panes: repeated, daemonAvailable: true, tmuxAvailable: true, now }, 120, 18, { useColor: false, selectedPaneId: '%9' }).join('\n');
+  assert.equal(frame.match(/This is a very long assistant final answer/g)?.length, 1);
+});
+
 test('medium and narrow layouts collapse to list-first selected summary', () => {
   const medium = renderSwitcherFrame({ panes, daemonAvailable: true, tmuxAvailable: true, now }, 90, 18, { useColor: false, home: '/Users/tung', selectedPaneId: '%2' }).join('\n');
   const narrow = renderSwitcherFrame({ panes, daemonAvailable: true, tmuxAvailable: true, now }, 60, 18, { useColor: false, home: '/Users/tung', selectedPaneId: '%2' }).join('\n');

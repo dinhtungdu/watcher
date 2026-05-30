@@ -226,13 +226,23 @@ function tmuxTarget(pane: AgentPane): string {
   return activationTargetLabel(pane);
 }
 
+function comparableDetailText(value: string): string {
+  return value.replace(/[.…]+$/u, '').trim();
+}
+
+function isDuplicateDetailText(candidate: string, existing: string[]): boolean {
+  const comparable = comparableDetailText(candidate);
+  return existing.some((value) => {
+    const other = comparableDetailText(value);
+    return comparable === other || comparable.startsWith(other) || other.startsWith(comparable);
+  });
+}
+
 function uniqueDetailText(values: Array<string | undefined>): string[] {
-  const seen = new Set<string>();
   const lines: string[] = [];
   for (const value of values) {
     const text = singleLine(value ?? '').trim();
-    if (!text || seen.has(text)) continue;
-    seen.add(text);
+    if (!text || isDuplicateDetailText(text, lines)) continue;
     lines.push(text);
   }
   return lines;
