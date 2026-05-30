@@ -53,6 +53,12 @@ function lastAssistantMessage(messages: unknown): string | undefined {
   return undefined;
 }
 
+function compactUnknown(value: unknown): string | undefined {
+  if (value === undefined || value === null) return undefined;
+  const text = typeof value === "string" ? value : JSON.stringify(value);
+  return text.replace(/\s+/g, " ").trim().slice(0, 240) || undefined;
+}
+
 function report(event: string, payload: Record<string, unknown> = {}) {
   try {
     const child = spawn("watcher", ["hook", "pi", event], {
@@ -79,6 +85,18 @@ export default function watcherStatusHook(pi: ExtensionAPI) {
   pi.on("message_end", async (event, ctx) => {
     const lastAssistantMessage = assistantMessageText(event.message);
     if (lastAssistantMessage) report("assistant-message", { lastAssistantMessage, cwd: ctx.cwd });
+  });
+
+  pi.on("tool_execution_start", async (event, ctx) => {
+    report("tool-start", { toolCallId: event.toolCallId, toolName: event.toolName, toolInput: compactUnknown(event.args), cwd: ctx.cwd });
+  });
+
+  pi.on("tool_execution_update", async (event, ctx) => {
+    report("tool-update", { toolCallId: event.toolCallId, toolName: event.toolName, partialResult: compactUnknown(event.partialResult), cwd: ctx.cwd });
+  });
+
+  pi.on("tool_execution_end", async (event, ctx) => {
+    report("tool-end", { toolCallId: event.toolCallId, toolName: event.toolName, toolResult: compactUnknown(event.result), toolStatus: event.isError ? "error" : "done", cwd: ctx.cwd });
   });
 
   pi.on("agent_end", async (event, ctx) => {

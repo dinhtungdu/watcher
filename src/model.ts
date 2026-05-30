@@ -32,6 +32,15 @@ export interface GitMetadata {
   worktreePath: string;
 }
 
+export interface AgentActivityItem {
+  id: string;
+  kind: 'assistant' | 'tool';
+  label: string;
+  text?: string;
+  state?: 'running' | 'done' | 'error';
+  updatedAt: number;
+}
+
 export interface AgentPane {
   id: string;
   agentType: string;
@@ -40,6 +49,7 @@ export interface AgentPane {
   userMessage?: string;
   currentAction?: string;
   lastMessage?: string;
+  activityItems?: AgentActivityItem[];
   target: TerminalTarget;
   cwd?: string;
   git?: GitMetadata;

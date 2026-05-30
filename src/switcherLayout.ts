@@ -297,7 +297,18 @@ function detailContent(pane: AgentPane, now: number, home: string | undefined, w
   const messageWidth = Math.max(12, width - 4);
   const fallbackDiscovered = pane.currentAction === DISCOVERY_FALLBACK_ACTION;
   const taskLines = showSummary && !fallbackDiscovered ? wrapText(summary, messageWidth, 4).map((value) => `${bold('▸', useColor)} ${value}`) : [];
-  const assistantValues = fallbackDiscovered ? [lastMessage] : [lastMessage, pane.currentAction];
+  const activityLines = pane.status === 'working'
+    ? (pane.activityItems ?? []).flatMap((item) => {
+      const marker = item.kind === 'tool' ? '⚙' : '▌';
+      const state = item.state && item.kind === 'tool' ? ` ${item.state}` : '';
+      const label = `${item.label}${state}`;
+      const lines = wrapText(item.text || label, messageWidth, 2);
+      return lines.length > 0
+        ? lines.map((line, index) => index === 0 ? `${bold(marker, useColor)} ${label}  ${line}` : `  ${line}`)
+        : [`${bold(marker, useColor)} ${label}`];
+    })
+    : [];
+  const assistantValues = fallbackDiscovered ? [lastMessage] : activityLines.length > 0 ? [] : [lastMessage, pane.currentAction];
   const assistantLines = uniqueDetailText(assistantValues)
     .flatMap((value) => wrapText(value, messageWidth, 5).map((line) => `${bold('▌', useColor)} ${line}`));
   const command = terminalTargetCommand(pane.target);
@@ -312,6 +323,7 @@ function detailContent(pane: AgentPane, now: number, home: string | undefined, w
       pane.reportedStatus && pane.reportedStatus !== pane.status ? `reported  ${pane.reportedStatus}` : undefined,
     ], useColor),
     detailSection('User message', taskLines, useColor),
+    detailSection('Activity', activityLines, useColor),
     detailSection('Assistant', assistantLines, useColor),
     detailSection(group.isGit ? 'Git worktree' : 'Path fallback', [
       group.isGit ? labelledLine('repo', group.repoTitle) : labelledLine('path', shortPath(group.path, home)),

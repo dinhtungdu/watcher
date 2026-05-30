@@ -104,9 +104,37 @@ test('assistant message event updates working pane narration without replacing u
   assert.equal(pane.summary, 'Watch working narration');
   assert.equal(pane.userMessage, 'Watch working narration');
   assert.equal(pane.lastMessage, 'I finished the first reasoning turn.');
+  assert.equal(pane.activityItems?.at(-1)?.text, 'I finished the first reasoning turn.');
   const frame = renderSwitcherFrame({ panes: [pane], daemonAvailable: true, tmuxAvailable: true, now: 1_700_000_005_000 }, 130, 20, { useColor: false }).join('\n');
   assert.match(frame, /▸ Watch working narration/);
-  assert.match(frame, /▌ I finished the first reasoning turn\./);
+  assert.match(frame, /Activity/);
+  assert.match(frame, /▌ assistant\s+I finished the first reasoning turn\./);
+});
+
+test('working activity keeps latest two tool/message items and clears on completion', async () => {
+  const store = new SnapshotStore();
+  await store.recordHookEvent({ agent: 'pi', event: 'prompt-submit', paneId: '%42', payload: { prompt: 'Show live activity' }, now: 1_700_000_000_000 }, fixtureRunner());
+  await store.recordHookEvent({ agent: 'pi', event: 'tool-start', paneId: '%42', payload: { toolCallId: 'read-1', toolName: 'read', toolInput: 'src/model.ts' }, now: 1_700_000_001_000 }, fixtureRunner());
+  await store.recordHookEvent({ agent: 'pi', event: 'tool-end', paneId: '%42', payload: { toolCallId: 'read-1', toolName: 'read', toolResult: 'read complete' }, now: 1_700_000_002_000 }, fixtureRunner());
+  await store.recordHookEvent({ agent: 'pi', event: 'assistant-message', paneId: '%42', payload: { lastAssistantMessage: 'I checked the model.' }, now: 1_700_000_003_000 }, fixtureRunner());
+  await store.recordHookEvent({ agent: 'pi', event: 'tool-start', paneId: '%42', payload: { toolCallId: 'test-1', toolName: 'bash', toolInput: 'bun test' }, now: 1_700_000_004_000 }, fixtureRunner());
+  const working = store.snapshot(true, 1_700_000_004_000).panes[0]!;
+  assert.deepEqual(working.activityItems?.map((item) => [item.kind, item.label, item.text]), [
+    ['assistant', 'assistant', 'I checked the model.'],
+    ['tool', 'bash', 'bun test'],
+  ]);
+  const frame = renderSwitcherFrame({ panes: [working], daemonAvailable: true, tmuxAvailable: true, now: 1_700_000_004_000 }, 130, 22, { useColor: false }).join('\n');
+  assert.match(frame, /Activity/);
+  assert.match(frame, /▌ assistant\s+I checked the model\./);
+  assert.match(frame, /⚙ bash running\s+bun test/);
+
+  await store.recordHookEvent({ agent: 'pi', event: 'stop', paneId: '%42', payload: { lastAssistantMessage: 'Final result.' }, now: 1_700_000_005_000 }, fixtureRunner());
+  const idle = store.snapshot(true, 1_700_000_005_000).panes[0]!;
+  assert.equal(idle.activityItems, undefined);
+  const idleFrame = renderSwitcherFrame({ panes: [idle], daemonAvailable: true, tmuxAvailable: true, now: 1_700_000_005_000 }, 130, 22, { useColor: false }).join('\n');
+  assert.doesNotMatch(idleFrame, /Activity/);
+  assert.match(idleFrame, /Assistant/);
+  assert.match(idleFrame, /▌ Final result\./);
 });
 
 test('daemon exposes local snapshot API', async () => {

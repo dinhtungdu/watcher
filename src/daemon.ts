@@ -1,6 +1,6 @@
 import net from 'node:net';
 import fs from 'node:fs/promises';
-import { AgentPane, SwitcherSnapshot } from './model.js';
+import { AgentActivityItem, AgentPane, SwitcherSnapshot } from './model.js';
 import { normalizeHookEvent, HookEventInput } from './events.js';
 import { CommandRunner, hasTmuxServer, nodeCommandRunner } from './tmux.js';
 
@@ -12,15 +12,25 @@ export type DaemonResponse =
   | { ok: true; snapshot?: SwitcherSnapshot }
   | { ok: false; error: string };
 
+function mergeActivityItems(previous: AgentPane | undefined, pane: AgentPane): AgentActivityItem[] | undefined {
+  if (pane.status === 'idle') return undefined;
+  if (!pane.activityItems?.length) return previous?.activityItems;
+  const byId = new Map<string, AgentActivityItem>();
+  for (const item of previous?.activityItems ?? []) byId.set(item.id, item);
+  for (const item of pane.activityItems) byId.set(item.id, item);
+  return [...byId.values()].sort((a, b) => a.updatedAt - b.updatedAt).slice(-2);
+}
+
 function mergePaneEvent(previous: AgentPane | undefined, pane: AgentPane): AgentPane {
   const userMessage = pane.userMessage ?? previous?.userMessage;
   const incomingHasUserTask = Boolean(pane.userMessage?.trim());
-  const preservePreviousTask = Boolean(previous?.summary && !incomingHasUserTask && (pane.status === 'idle' || pane.lastMessage));
+  const preservePreviousTask = Boolean(previous?.summary && !incomingHasUserTask);
   return {
     ...previous,
     ...pane,
     userMessage,
     summary: preservePreviousTask ? previous!.summary : pane.summary,
+    activityItems: mergeActivityItems(previous, pane),
   };
 }
 

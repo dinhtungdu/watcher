@@ -1,4 +1,4 @@
-import { AgentPane, AgentStatus } from './model.js';
+import { AgentActivityItem, AgentPane, AgentStatus } from './model.js';
 import { CommandRunner, nodeCommandRunner } from './tmux.js';
 import { getTmuxPane } from './tmuxContext.js';
 import { discoverGitMetadata } from './git.js';
@@ -19,6 +19,9 @@ export function mapEventToStatus(event: string): AgentStatus {
     case 'prompt-submit':
     case 'agent-start':
     case 'assistant-message':
+    case 'tool-start':
+    case 'tool-update':
+    case 'tool-end':
       return 'working';
     case 'needs-input':
     case 'permission':
@@ -48,6 +51,20 @@ function summarize(value: string | undefined, fallback: string): string {
   return oneLine.length > 140 ? `${oneLine.slice(0, 139)}…` : oneLine;
 }
 
+function activityItem(input: HookEventInput, lastMessage: string | undefined, now: number): AgentActivityItem | undefined {
+  if (input.event === 'assistant-message' && lastMessage) {
+    return { id: 'assistant', kind: 'assistant', label: 'assistant', text: lastMessage, state: 'done', updatedAt: now };
+  }
+  if (!input.event.startsWith('tool-')) return undefined;
+  const toolName = payloadString(input.payload, ['toolName', 'tool']) ?? 'tool';
+  const toolCallId = payloadString(input.payload, ['toolCallId', 'id']) ?? toolName;
+  const state = input.event === 'tool-end'
+    ? (payloadString(input.payload, ['toolStatus', 'status']) === 'error' ? 'error' : 'done')
+    : 'running';
+  const text = payloadString(input.payload, ['toolResult', 'partialResult', 'toolInput', 'input', 'summary']);
+  return { id: `tool:${toolCallId}`, kind: 'tool', label: toolName, text, state, updatedAt: now };
+}
+
 export async function normalizeHookEvent(input: HookEventInput, runner: CommandRunner = nodeCommandRunner): Promise<AgentPane> {
   const status = mapEventToStatus(input.event);
   const tmux = await getTmuxPane(input.paneId, runner);
@@ -61,6 +78,8 @@ export async function normalizeHookEvent(input: HookEventInput, runner: CommandR
   const summary = status === 'idle'
     ? summarize(prompt, 'Finished')
     : summarize(prompt ?? action ?? lastMessage, status === 'unknown' ? 'Known agent pane' : input.event.replaceAll('-', ' '));
+  const now = input.now ?? Date.now();
+  const item = activityItem(input, lastMessage, now);
   return {
     id: input.paneId,
     agentType: input.agent,
@@ -70,9 +89,10 @@ export async function normalizeHookEvent(input: HookEventInput, runner: CommandR
     userMessage: prompt,
     currentAction: action,
     lastMessage,
+    activityItems: item ? [item] : undefined,
     target: tmux,
     cwd,
     git,
-    updatedAt: input.now ?? Date.now(),
+    updatedAt: now,
   };
 }
