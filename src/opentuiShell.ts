@@ -24,6 +24,10 @@ export async function runOpenTuiSwitcher(): Promise<void> {
   let currentPanes = [] as ReturnType<typeof selectablePanes>;
   let pendingActivation: AgentPane | undefined;
   let closed = false;
+  let resolveClosed: (() => void) | undefined;
+  const closedPromise = new Promise<void>((resolve) => {
+    resolveClosed = resolve;
+  });
   let redrawInFlight = false;
 
   async function redraw(): Promise<void> {
@@ -51,8 +55,10 @@ export async function runOpenTuiSwitcher(): Promise<void> {
     clearInterval(interval);
     process.stdout.off('resize', resizeHandler);
     process.stdin.off('data', inputHandler);
+    process.stdin.pause();
     process.off('SIGINT', sigintHandler);
     restoreTerminal();
+    resolveClosed?.();
   }
 
   function sigintHandler(): void {
@@ -94,14 +100,7 @@ export async function runOpenTuiSwitcher(): Promise<void> {
   const interval = setInterval(() => void redraw(), 2000);
   await redraw();
 
-  await new Promise<void>((resolve) => {
-    const check = setInterval(() => {
-      if (closed) {
-        clearInterval(check);
-        resolve();
-      }
-    }, 25);
-  });
+  await closedPromise;
 
   if (pendingActivation) await activateAgentPane(pendingActivation);
 }
