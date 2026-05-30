@@ -1,6 +1,8 @@
 # Watcher
 
-A tmux-native switcher for local coding agents. See which agent panes need attention, preview context, then jump straight back into tmux.
+A tmux-native switcher for local coding agents.
+
+Built because I live in the terminal, already use tmux, and do not want to leave it or reinvent it. Watcher just shows which agent panes need attention, previews enough context, then jumps straight back into tmux.
 
 ![Watcher terminal preview](docs/assets/watcher-terminal-preview.png)
 
