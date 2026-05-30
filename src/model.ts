@@ -1,6 +1,6 @@
 export type AgentStatus = 'working' | 'needs_input' | 'stalled' | 'unknown' | 'idle';
 
-export type AgentType = 'pi' | 'claude' | 'codex' | 'opencode' | 'aider';
+export type AgentType = 'pi' | 'claude' | 'codex' | 'opencode';
 
 export type TerminalBackend = 'tmux';
 

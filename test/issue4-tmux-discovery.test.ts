@@ -28,7 +28,7 @@ function discoveryRunner(): CommandRunner {
       }
       if (file === 'ps') {
         if (args[1] === '202') return { stdout: 'claude\n', stderr: '' };
-        if (args[1] === '203') return { stdout: 'aider\n', stderr: '' };
+        if (args[1] === '203') return { stdout: 'codex\n', stderr: '' };
       }
       if (file === 'git') {
         const cwd = args[1];
@@ -49,7 +49,7 @@ test('tmux discovery detects direct and one-level child agent processes', async 
   assert.deepEqual(result.panes.map((pane) => [pane.id, pane.agentType, pane.status]), [
     ['tmux:%1', 'pi', 'unknown'],
     ['tmux:%2', 'claude', 'unknown'],
-    ['tmux:%3', 'aider', 'unknown'],
+    ['tmux:%3', 'codex', 'unknown'],
     ['tmux:%5', 'opencode', 'unknown'],
   ]);
   assert.equal(result.panes.some((pane) => pane.id === 'tmux:%4'), false);
@@ -65,7 +65,8 @@ test('discovered panes carry grouping metadata and path fallback', async () => {
   assert.match(frame, /~\/tmp\/spike/);
   assert.match(frame, /● pi\s+Waiting for first Watcher event/);
   assert.match(frame, /● claude\s+Detected claude process/);
-  assert.match(frame, /● aider\s+Detected aider process/);
+  assert.match(frame, /● codex\s+Detected codex process/);
+  assert.doesNotMatch(frame, /aider/);
   assert.match(frame, /Detected opencode process/);
 });
 

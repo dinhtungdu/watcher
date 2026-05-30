@@ -163,7 +163,7 @@ function emptyLines(snapshot: SwitcherSnapshot, width: number, height: number, u
     ? 'Start tmux and run agent panes there; Watcher is local-tmux only.'
     : !snapshot.daemonAvailable
       ? 'Run watcher daemon or install integrations; unintegrated discovery arrives in the full switcher.'
-      : 'Start pi, claude, codex, opencode, or aider in a tmux pane and try again.';
+      : 'Start pi, claude, codex, or opencode in a tmux pane and try again.';
   const body = [
     '',
     bold('Nothing to activate', useColor),

@@ -33,7 +33,7 @@ Event routing uses backend-aware Event Surface Identity. Event payloads may prov
 
 The daemon can stay focused on applying normalized Watcher Agent Events to Agent Pane state instead of learning every agent's native event dialect.
 
-Pi remains the first fully functional Agent Integration during the refactor. OpenCode, Codex, Claude, and Aider can be added to the integration registry for detection/capability metadata before their installers are implemented.
+Pi remains the first fully functional Agent Integration during the refactor. OpenCode, Codex, and Claude can be added to the integration registry for detection/capability metadata before their installers are implemented.
 
 Terminal preview is intentionally left as a separate implementation slice after the Agent Integration/event refactor.
 

@@ -1,7 +1,6 @@
 import path from 'node:path';
 import type { AgentType } from '../model.js';
 import type { AgentIntegration, AgentProcessInfo } from './types.js';
-import { aiderIntegration } from './aider.js';
 import { claudeIntegration } from './claude.js';
 import { codexIntegration } from './codex.js';
 import { opencodeIntegration } from './opencode.js';
@@ -12,7 +11,6 @@ export const AGENT_INTEGRATIONS = [
   claudeIntegration,
   codexIntegration,
   opencodeIntegration,
-  aiderIntegration,
 ] as const satisfies readonly AgentIntegration[];
 
 export const AGENT_TYPES = AGENT_INTEGRATIONS.map((integration) => integration.type) as AgentType[];
