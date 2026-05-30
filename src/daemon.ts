@@ -14,12 +14,13 @@ export type DaemonResponse =
 
 function mergePaneEvent(previous: AgentPane | undefined, pane: AgentPane): AgentPane {
   const userMessage = pane.userMessage ?? previous?.userMessage;
-  const preserveTaskSummary = previous?.summary && pane.status === 'idle' && !pane.currentAction;
+  const incomingHasUserTask = Boolean(pane.userMessage?.trim());
+  const preservePreviousTask = Boolean(previous?.summary && !incomingHasUserTask && (pane.status === 'idle' || pane.lastMessage));
   return {
     ...previous,
     ...pane,
     userMessage,
-    summary: preserveTaskSummary ? previous.summary : pane.summary,
+    summary: preservePreviousTask ? previous!.summary : pane.summary,
   };
 }
 

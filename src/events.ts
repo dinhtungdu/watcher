@@ -58,7 +58,7 @@ export async function normalizeHookEvent(input: HookEventInput, runner: CommandR
     ? payloadString(input.payload, ['reason', 'error']) ?? 'error'
     : payloadString(input.payload, ['currentAction', 'action', 'tool']);
   const summary = status === 'idle'
-    ? summarize(lastMessage ?? prompt, 'Finished')
+    ? summarize(prompt, 'Finished')
     : summarize(prompt ?? action ?? lastMessage, status === 'unknown' ? 'Known agent pane' : input.event.replaceAll('-', ' '));
   return {
     id: input.paneId,

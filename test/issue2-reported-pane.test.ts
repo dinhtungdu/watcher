@@ -80,6 +80,21 @@ test('working pane can show latest assistant narration below the user task', asy
   assert.match(frame, /▌ I am inspecting the layout now\./);
 });
 
+test('assistant-only updates preserve existing user task identity', async () => {
+  const store = new SnapshotStore();
+  await store.recordHookEvent({ agent: 'pi', event: 'prompt-submit', paneId: '%42', payload: { prompt: 'Keep this user prompt' }, now: 1_700_000_000_000 }, fixtureRunner());
+  await store.recordHookEvent({ agent: 'pi', event: 'agent-end', paneId: '%42', payload: { lastAssistantMessage: 'Assistant final answer should not replace it' }, now: 1_700_000_010_000 }, fixtureRunner());
+  const pane = store.snapshot(true, 1_700_000_010_000).panes[0]!;
+  assert.equal(pane.summary, 'Keep this user prompt');
+  assert.equal(pane.userMessage, 'Keep this user prompt');
+  assert.equal(pane.lastMessage, 'Assistant final answer should not replace it');
+  const frame = renderSwitcherFrame({ panes: [pane], daemonAvailable: true, tmuxAvailable: true, now: 1_700_000_010_000 }, 130, 20, { useColor: false }).join('\n');
+  assert.match(frame, /User message/);
+  assert.match(frame, /▸ Keep this user prompt/);
+  assert.match(frame, /Assistant/);
+  assert.match(frame, /▌ Assistant final answer should not replace it/);
+});
+
 test('daemon exposes local snapshot API', async () => {
   const socketPath = path.join(os.tmpdir(), `watcher-test-${process.pid}-${Date.now()}.sock`);
   const store = new SnapshotStore();
