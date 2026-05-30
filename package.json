@@ -1,5 +1,5 @@
 {
-  "name": "watcher",
+  "name": "@dinhtungdu/watcher",
   "version": "1.0.0",
   "author": "",
   "repository": {
@@ -12,7 +12,7 @@
     "typescript": "^5.9.3"
   },
   "bin": {
-    "watcher": "./src/cli.ts"
+    "watcher": "src/cli.ts"
   },
   "bugs": {
     "url": "https://github.com/dinhtungdu/watcher/issues"
