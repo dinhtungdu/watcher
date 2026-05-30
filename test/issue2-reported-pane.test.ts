@@ -95,6 +95,20 @@ test('assistant-only updates preserve existing user task identity', async () => 
   assert.match(frame, /▌ Assistant final answer should not replace it/);
 });
 
+test('assistant message event updates working pane narration without replacing user task', async () => {
+  const store = new SnapshotStore();
+  await store.recordHookEvent({ agent: 'pi', event: 'prompt-submit', paneId: '%42', payload: { prompt: 'Watch working narration' }, now: 1_700_000_000_000 }, fixtureRunner());
+  await store.recordHookEvent({ agent: 'pi', event: 'assistant-message', paneId: '%42', payload: { lastAssistantMessage: 'I finished the first reasoning turn.' }, now: 1_700_000_005_000 }, fixtureRunner());
+  const pane = store.snapshot(true, 1_700_000_005_000).panes[0]!;
+  assert.equal(pane.status, 'working');
+  assert.equal(pane.summary, 'Watch working narration');
+  assert.equal(pane.userMessage, 'Watch working narration');
+  assert.equal(pane.lastMessage, 'I finished the first reasoning turn.');
+  const frame = renderSwitcherFrame({ panes: [pane], daemonAvailable: true, tmuxAvailable: true, now: 1_700_000_005_000 }, 130, 20, { useColor: false }).join('\n');
+  assert.match(frame, /▸ Watch working narration/);
+  assert.match(frame, /▌ I finished the first reasoning turn\./);
+});
+
 test('daemon exposes local snapshot API', async () => {
   const socketPath = path.join(os.tmpdir(), `watcher-test-${process.pid}-${Date.now()}.sock`);
   const store = new SnapshotStore();

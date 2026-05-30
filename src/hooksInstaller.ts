@@ -38,11 +38,17 @@ function textFromContent(content: unknown): string | undefined {
   return undefined;
 }
 
+function assistantMessageText(message: unknown): string | undefined {
+  const candidate = message as { role?: unknown; content?: unknown } | undefined;
+  if (candidate?.role !== "assistant") return undefined;
+  return textFromContent(candidate.content);
+}
+
 function lastAssistantMessage(messages: unknown): string | undefined {
   if (!Array.isArray(messages)) return undefined;
   for (let index = messages.length - 1; index >= 0; index -= 1) {
-    const message = messages[index] as { role?: unknown; content?: unknown } | undefined;
-    if (message?.role === "assistant") return textFromContent(message.content);
+    const text = assistantMessageText(messages[index]);
+    if (text) return text;
   }
   return undefined;
 }
@@ -68,6 +74,11 @@ export default function watcherStatusHook(pi: ExtensionAPI) {
 
   pi.on("before_agent_start", async (event, ctx) => {
     report("prompt-submit", { prompt: event.prompt, cwd: ctx.cwd });
+  });
+
+  pi.on("message_end", async (event, ctx) => {
+    const lastAssistantMessage = assistantMessageText(event.message);
+    if (lastAssistantMessage) report("assistant-message", { lastAssistantMessage, cwd: ctx.cwd });
   });
 
   pi.on("agent_end", async (event, ctx) => {

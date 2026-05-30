@@ -18,6 +18,7 @@ export function mapEventToStatus(event: string): AgentStatus {
       return 'unknown';
     case 'prompt-submit':
     case 'agent-start':
+    case 'assistant-message':
       return 'working';
     case 'needs-input':
     case 'permission':

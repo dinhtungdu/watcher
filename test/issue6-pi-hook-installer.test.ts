@@ -22,6 +22,8 @@ test('watcher hooks install pi writes managed Pi extension and reload guidance',
   assert.match(content, /report\("session-start"/);
   assert.match(content, /pi\.on\("before_agent_start"/);
   assert.match(content, /report\("prompt-submit", \{ prompt: event\.prompt/);
+  assert.match(content, /pi\.on\("message_end"/);
+  assert.match(content, /report\("assistant-message"/);
   assert.match(content, /pi\.on\("agent_end"/);
   assert.match(content, /report\("stop"/);
   assert.match(content, /spawn\("watcher", \["hook", "pi", event\]/);
