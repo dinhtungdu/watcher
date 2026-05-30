@@ -77,7 +77,7 @@ export async function normalizeHookEvent(input: HookEventInput, runner: CommandR
     : payloadString(input.payload, ['currentAction', 'action', 'tool']);
   const summary = status === 'idle'
     ? summarize(prompt, 'Finished')
-    : summarize(prompt ?? action ?? lastMessage, status === 'unknown' ? 'Known agent pane' : input.event.replaceAll('-', ' '));
+    : summarize(prompt ?? action ?? lastMessage, status === 'unknown' ? 'Waiting for first task' : input.event.replaceAll('-', ' '));
   const now = input.now ?? Date.now();
   const item = activityItem(input, lastMessage, now);
   return {

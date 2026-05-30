@@ -137,6 +137,16 @@ test('working activity keeps latest two tool/message items and clears on complet
   assert.match(idleFrame, /▌ Final result\./);
 });
 
+test('session-start placeholder is not rendered as a user message', async () => {
+  const store = new SnapshotStore();
+  await store.recordHookEvent({ agent: 'pi', event: 'session-start', paneId: '%42', payload: {}, now: 1_700_000_000_000 }, fixtureRunner());
+  const pane = store.snapshot(true, 1_700_000_000_000).panes[0]!;
+  assert.equal(pane.summary, 'Waiting for first task');
+  const frame = renderSwitcherFrame({ panes: [pane], daemonAvailable: true, tmuxAvailable: true, now: 1_700_000_000_000 }, 130, 20, { useColor: false }).join('\n');
+  assert.match(frame, /Waiting for first task/);
+  assert.doesNotMatch(frame, /User message/);
+});
+
 test('daemon exposes local snapshot API', async () => {
   const socketPath = path.join(os.tmpdir(), `watcher-test-${process.pid}-${Date.now()}.sock`);
   const store = new SnapshotStore();

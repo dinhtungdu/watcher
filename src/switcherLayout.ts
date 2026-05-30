@@ -293,7 +293,8 @@ function detailContent(pane: AgentPane, now: number, home: string | undefined, w
   const fallbackSummary = singleLine(pane.summary || '(no summary yet)').trim();
   const userMessage = singleLine(pane.userMessage ?? '').trim();
   const summary = userMessage || fallbackSummary;
-  const showSummary = summary && (userMessage || !isDuplicateDetailText(summary, lastMessage ? [lastMessage] : []));
+  const placeholderSummary = !userMessage && (fallbackSummary === 'Waiting for first task' || fallbackSummary.startsWith('Detected ') || fallbackSummary === 'Finished');
+  const showSummary = summary && !placeholderSummary && (userMessage || !isDuplicateDetailText(summary, lastMessage ? [lastMessage] : []));
   const messageWidth = Math.max(12, width - 4);
   const fallbackDiscovered = pane.currentAction === DISCOVERY_FALLBACK_ACTION;
   const taskLines = showSummary && !fallbackDiscovered ? wrapText(summary, messageWidth, 4).map((value) => `${bold('▸', useColor)} ${value}`) : [];
