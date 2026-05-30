@@ -66,6 +66,7 @@ export interface AgentPane {
   git?: GitMetadata;
   updatedAt: number;
   reportedStatus?: Exclude<AgentStatus, 'stalled'>;
+  terminalPreview?: string;
   outputHash?: string;
   outputChangedAt?: number;
 }

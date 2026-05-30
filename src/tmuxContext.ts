@@ -28,6 +28,20 @@ export async function getTmuxPane(paneId: string, runner: CommandRunner = nodeCo
   }
 }
 
+export async function captureTmuxPanePreview(paneId: string, runner: CommandRunner = nodeCommandRunner, lines = 40): Promise<string | undefined> {
+  try {
+    const result = await runner.execFile('tmux', ['capture-pane', '-p', '-t', paneId, '-S', `-${lines}`], { timeout: 1000 });
+    const preview = result.stdout
+      .split('\n')
+      .map((line) => line.replace(/\s+$/u, ''))
+      .join('\n')
+      .trim();
+    return preview ? preview.slice(-8000) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
 function parsePaneLine(line: string): TmuxTarget {
   const [paneId, sessionName, windowIndex, paneIndex, paneCurrentPath, panePid, paneCurrentCommand, windowName, paneTitle] = line.split('\t');
   return tmuxTarget({

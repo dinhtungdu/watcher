@@ -287,6 +287,15 @@ function detailSection(title: string, lines: Array<string | undefined>, useColor
   return content.length > 0 ? [bold(title, useColor), ...content] : [];
 }
 
+function previewLines(value: string | undefined, width: number, maxLines = 6): string[] {
+  if (!value || width <= 0 || maxLines <= 0) return [];
+  const lines = value
+    .split('\n')
+    .map((line) => singleLine(line).trimEnd())
+    .filter(Boolean);
+  return lines.slice(Math.max(0, lines.length - maxLines)).map((line) => fit(line, width, false));
+}
+
 function spacedSections(sections: string[][]): string[] {
   return sections.filter((section) => section.length > 0).flatMap((section, index) => index === 0 ? section : ['', ...section]);
 }
@@ -316,6 +325,7 @@ function detailContent(pane: AgentPane, now: number, home: string | undefined, w
   const assistantValues = fallbackDiscovered ? [lastMessage] : activityLines.length > 0 ? [] : [lastMessage, pane.currentAction];
   const assistantLines = uniqueDetailText(assistantValues)
     .flatMap((value) => wrapText(value, messageWidth, 5).map((line) => `${bold('▌', useColor)} ${line}`));
+  const terminalPreviewLines = previewLines(pane.terminalPreview, messageWidth, 6);
   const command = terminalTargetCommand(pane.target);
   const pid = terminalTargetPid(pane.target);
   const cwd = pane.cwd ? shortPath(pane.cwd, home) : undefined;
@@ -342,6 +352,7 @@ function detailContent(pane: AgentPane, now: number, home: string | undefined, w
       labelledLine('command', command),
       pid === undefined ? undefined : labelledLine('pid', String(pid)),
     ], useColor),
+    detailSection('Terminal preview', terminalPreviewLines, useColor),
     detailSection('Actions', ['enter     activate pane', 'q         quit'], useColor),
   ]);
 }

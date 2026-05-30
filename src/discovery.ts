@@ -3,7 +3,7 @@ import { detectAgentFromProcess, getAgentIntegration } from './agents/registry.j
 import { canonicalSurfaceKey, surfaceFromTarget } from './surfaceIdentity.js';
 import { normalizeAgentPaneTarget, terminalTargetCommand, terminalTargetCwd, terminalTargetPid } from './terminalTarget.js';
 import { CommandRunner, nodeCommandRunner } from './tmux.js';
-import { listTmuxPanes } from './tmuxContext.js';
+import { captureTmuxPanePreview, listTmuxPanes } from './tmuxContext.js';
 import { discoverGitMetadata } from './git.js';
 
 export interface DiscoveryResult {
@@ -55,6 +55,7 @@ export async function discoverUnintegratedPanes(runner: CommandRunner = nodeComm
     const cwd = terminalTargetCwd(tmux);
     const integration = getAgentIntegration(agentType);
     const waitsForEvents = integration.capabilities.eventSourceInstall === 'supported';
+    const terminalPreview = await captureTmuxPanePreview(tmux.paneId, runner);
     discovered.push({
       id: canonicalSurfaceKey(surfaceFromTarget(tmux)),
       agentType,
@@ -65,8 +66,9 @@ export async function discoverUnintegratedPanes(runner: CommandRunner = nodeComm
         source: 'terminal',
         semanticEvents: false,
         assistantDeltas: false,
-        terminalPreview: false,
+        terminalPreview: Boolean(terminalPreview),
       },
+      terminalPreview,
       target: tmux,
       cwd,
       git: await discoverGitMetadata(cwd, runner),

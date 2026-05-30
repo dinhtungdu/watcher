@@ -21,6 +21,10 @@ function discoveryRunner(): CommandRunner {
           stderr: '',
         };
       }
+      if (file === 'tmux' && args[0] === 'capture-pane') {
+        if (args[3] === '%2') throw new Error('preview unavailable');
+        return { stdout: `recent output for ${args[3]}\nagent is doing useful work\n`, stderr: '' };
+      }
       if (file === 'pgrep') {
         if (args[1] === '102') return { stdout: '202\n', stderr: '' };
         if (args[1] === '103') return { stdout: '203\n', stderr: '' };
@@ -52,6 +56,10 @@ test('tmux discovery detects direct and one-level child agent processes', async 
     ['tmux:%3', 'codex', 'unknown'],
     ['tmux:%5', 'opencode', 'unknown'],
   ]);
+  assert.equal(result.panes.find((pane) => pane.id === 'tmux:%1')?.terminalPreview, 'recent output for %1\nagent is doing useful work');
+  assert.equal(result.panes.find((pane) => pane.id === 'tmux:%2')?.terminalPreview, undefined);
+  assert.equal(result.panes.find((pane) => pane.id === 'tmux:%1')?.observation?.terminalPreview, true);
+  assert.equal(result.panes.find((pane) => pane.id === 'tmux:%2')?.observation?.terminalPreview, false);
   assert.equal(result.panes.some((pane) => pane.id === 'tmux:%4'), false);
 });
 
@@ -68,6 +76,8 @@ test('discovered panes carry grouping metadata and path fallback', async () => {
   assert.match(frame, /● codex\s+Detected codex process/);
   assert.doesNotMatch(frame, /aider/);
   assert.match(frame, /Detected opencode process/);
+  assert.match(frame, /Terminal preview/);
+  assert.match(frame, /agent is doing useful work/);
 });
 
 test('merge hides daemon ghost panes and keeps event-source status over discovery', async () => {
