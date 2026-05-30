@@ -32,7 +32,7 @@ function textFromContent(content: unknown): string | undefined {
     const text = content
       .map((part) => part && typeof part === "object" && "text" in part ? String((part as { text?: unknown }).text ?? "") : "")
       .filter(Boolean)
-      .join("\n");
+      .join("\\n");
     return text || undefined;
   }
   return undefined;
