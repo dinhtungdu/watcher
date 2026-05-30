@@ -12,10 +12,7 @@ function terminalSize(): { width: number; height: number } {
 }
 
 export async function runOpenTuiSwitcher(): Promise<void> {
-  // OpenTUI's current Node path faceplants on bun-ffi-structs/node:ffi. So the
-  // production shell intentionally renders the accepted prototype-style ANSI
-  // frame directly under Bun. Yes, the name is now historical. Naming things:
-  // still cursed.
+  // Render the accepted prototype-style ANSI frame directly under Bun.
   let state: SwitcherRenderState = {
     useColor: Boolean(process.stdout.isTTY && !process.env.NO_COLOR),
     home: process.env.HOME,

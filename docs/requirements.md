@@ -1,6 +1,6 @@
 # Watcher MVP Requirements
 
-Watcher is a tmux-wide Agent Switcher. It lists actionable agent panes across all local tmux sessions and activates the selected pane.
+Watcher is a tmux-wide Agent Switcher. It lists running agent panes across all local tmux sessions and activates the selected pane.
 
 ## Scope
 
@@ -20,11 +20,13 @@ Watcher is a tmux-wide Agent Switcher. It lists actionable agent panes across al
 
 ## Statuses
 
+Agent Status describes priority and context for a running Agent Pane. It does not decide visibility; all running Agent Panes are shown.
+
 - `working`: agent is handling a prompt.
 - `needs_input`: agent needs human input, permission, or decision.
 - `stalled`: agent appears working but has no output/status/title change for 5 minutes.
 - `unknown`: known agent process exists but no reliable status yet.
-- `idle`: agent finished or is inactive; shown for running agent panes so the switcher can activate all agents.
+- `idle`: agent finished or is inactive; still shown while the agent pane exists so the switcher can activate it.
 
 ## Switcher Layout
 

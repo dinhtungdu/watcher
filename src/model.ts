@@ -42,7 +42,7 @@ export interface SwitcherSnapshot {
   now?: number;
 }
 
-export const ACTIONABLE_STATUSES: AgentStatus[] = ['needs_input', 'stalled', 'working', 'unknown', 'idle'];
+export const RUNNING_AGENT_STATUSES: AgentStatus[] = ['needs_input', 'stalled', 'working', 'unknown', 'idle'];
 
 export const STATUS_RANK: Record<AgentStatus, number> = {
   needs_input: 0,
@@ -52,6 +52,6 @@ export const STATUS_RANK: Record<AgentStatus, number> = {
   idle: 4,
 };
 
-export function isActionable(status: AgentStatus): boolean {
-  return ACTIONABLE_STATUSES.includes(status);
+export function isRunningAgentStatus(status: AgentStatus): boolean {
+  return RUNNING_AGENT_STATUSES.includes(status);
 }

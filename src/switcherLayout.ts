@@ -1,4 +1,4 @@
-import { AgentPane, AgentStatus, STATUS_RANK, SwitcherSnapshot, isActionable } from './model.js';
+import { AgentPane, AgentStatus, STATUS_RANK, SwitcherSnapshot, isRunningAgentStatus } from './model.js';
 import { activationTargetLabel } from './activation.js';
 import { basename, bold, dim, fit, formatAge, line, selected, shortPath } from './text.js';
 
@@ -98,7 +98,7 @@ function collectionNewest(items: AgentPane[]): number {
 
 export function groupPanes(panes: AgentPane[], now: number = Date.now(), home?: string): RepoGroup[] {
   const repos = new Map<string, Omit<RepoGroup, 'worktrees'> & { worktrees: Map<string, WorktreeGroup> }>();
-  for (const pane of panes.filter((candidate) => isActionable(candidate.status))) {
+  for (const pane of panes.filter((candidate) => isRunningAgentStatus(candidate.status))) {
     const group = paneGroup(pane, home);
     let repo = repos.get(group.repoKey);
     if (!repo) {
