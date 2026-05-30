@@ -1,0 +1,4 @@
+[test]
+# Keep bare `bun test` focused on the source TypeScript tests.
+# Ignored build artifacts under dist/ can otherwise be discovered by Bun's default recursive scan.
+root = "./test"
