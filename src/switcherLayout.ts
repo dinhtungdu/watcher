@@ -39,6 +39,8 @@ export interface RepoGroup {
   worktrees: WorktreeGroup[];
 }
 
+const DISCOVERY_FALLBACK_ACTION = 'tmux/process discovery fallback';
+
 const statusColors: Record<AgentStatus, string> = {
   needs_input: '\x1b[33m',
   stalled: '\x1b[35m',
@@ -293,8 +295,10 @@ function detailContent(pane: AgentPane, now: number, home: string | undefined, w
   const summary = userMessage || fallbackSummary;
   const showSummary = summary && (userMessage || !isDuplicateDetailText(summary, lastMessage ? [lastMessage] : []));
   const messageWidth = Math.max(12, width - 4);
-  const taskLines = showSummary ? wrapText(summary, messageWidth, 4).map((value) => `${bold('▸', useColor)} ${value}`) : [];
-  const assistantLines = uniqueDetailText([lastMessage, pane.currentAction])
+  const fallbackDiscovered = pane.currentAction === DISCOVERY_FALLBACK_ACTION;
+  const taskLines = showSummary && !fallbackDiscovered ? wrapText(summary, messageWidth, 4).map((value) => `${bold('▸', useColor)} ${value}`) : [];
+  const assistantValues = fallbackDiscovered ? [lastMessage] : [lastMessage, pane.currentAction];
+  const assistantLines = uniqueDetailText(assistantValues)
     .flatMap((value) => wrapText(value, messageWidth, 5).map((line) => `${bold('▌', useColor)} ${line}`));
   const command = terminalTargetCommand(pane.target);
   const pid = terminalTargetPid(pane.target);
@@ -304,6 +308,7 @@ function detailContent(pane: AgentPane, now: number, home: string | undefined, w
   return spacedSections([
     detailSection('Status', [
       `${statusDot(pane.status, false)} ${pane.agentType} · ${pane.status} · updated ${formatAge(ageSeconds(pane, now))} ago`,
+      fallbackDiscovered ? 'discovered by tmux process scan; install hooks for rich status' : undefined,
       pane.reportedStatus && pane.reportedStatus !== pane.status ? `reported  ${pane.reportedStatus}` : undefined,
     ], useColor),
     detailSection('User message', taskLines, useColor),
