@@ -292,7 +292,8 @@ function detailContent(pane: AgentPane, now: number, home: string | undefined, w
   const showSummary = summary && !isDuplicateDetailText(summary, lastMessage ? [lastMessage] : []);
   const messageWidth = Math.max(12, width - 4);
   const taskLines = showSummary ? wrapText(summary, messageWidth, 4).map((value) => `${bold('▸', useColor)} ${value}`) : [];
-  const messageLines = wrapText(lastMessage, messageWidth, 5).map((value) => `${bold('▌', useColor)} ${value}`);
+  const assistantLines = uniqueDetailText([lastMessage, pane.currentAction])
+    .flatMap((value) => wrapText(value, messageWidth, 5).map((line) => `${bold('▌', useColor)} ${line}`));
   const command = terminalTargetCommand(pane.target);
   const pid = terminalTargetPid(pane.target);
   const cwd = pane.cwd ? shortPath(pane.cwd, home) : undefined;
@@ -303,8 +304,8 @@ function detailContent(pane: AgentPane, now: number, home: string | undefined, w
       `${statusDot(pane.status, false)} ${pane.agentType} · ${pane.status} · updated ${formatAge(ageSeconds(pane, now))} ago`,
       pane.reportedStatus && pane.reportedStatus !== pane.status ? `reported  ${pane.reportedStatus}` : undefined,
     ], useColor),
-    detailSection('Task', [...taskLines, labelledLine('action', pane.currentAction)], useColor),
-    detailSection('Last message', messageLines, useColor),
+    detailSection('User message', taskLines, useColor),
+    detailSection('Assistant', assistantLines, useColor),
     detailSection(group.isGit ? 'Git worktree' : 'Path fallback', [
       group.isGit ? labelledLine('repo', group.repoTitle) : labelledLine('path', shortPath(group.path, home)),
       group.isGit ? labelledLine('branch', group.branch) : undefined,

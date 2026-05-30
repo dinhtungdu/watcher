@@ -104,7 +104,8 @@ test('details pane does not repeat truncated summary and full last message', () 
 test('details pane wraps and marks task text separately from assistant message', () => {
   const longTask = 'Implement the detail pane so the user prompt wraps across multiple lines and is visually distinct from the assistant response.';
   const frame = renderSwitcherFrame({ panes: [pane({ id: '%9', status: 'needs_input', summary: longTask, lastMessage: 'Please approve the layout.' })], daemonAvailable: true, tmuxAvailable: true, now }, 130, 22, { useColor: false, selectedPaneId: '%9' }).join('\n');
-  assert.match(frame, /Task/);
+  assert.match(frame, /User message/);
+  assert.match(frame, /Assistant/);
   assert.match(frame, /▸ Implement the detail pane/);
   assert.match(frame, /▌ Please approve the layout\./);
 });
@@ -112,7 +113,7 @@ test('details pane wraps and marks task text separately from assistant message',
 test('details pane leaves breathing room between sections', () => {
   const frame = renderSwitcherFrame({ panes: [pane({ id: '%9', status: 'working', summary: 'Make details readable' })], daemonAvailable: true, tmuxAvailable: true, now }, 130, 22, { useColor: false, selectedPaneId: '%9' }).map(stripAnsi);
   const statusIndex = frame.findIndex((line) => line.includes('Status'));
-  const taskIndex = frame.findIndex((line) => line.includes('Task'));
+  const taskIndex = frame.findIndex((line) => line.includes('User message'));
   assert.equal(taskIndex, statusIndex + 3);
 });
 
