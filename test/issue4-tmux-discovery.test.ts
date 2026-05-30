@@ -76,7 +76,7 @@ test('discovered panes carry grouping metadata and path fallback', async () => {
   assert.match(frame, /● codex\s+Detected codex process/);
   assert.doesNotMatch(frame, /aider/);
   assert.match(frame, /Detected opencode process/);
-  assert.match(frame, /Terminal preview/);
+  assert.match(frame, /terminal preview/);
   assert.match(frame, /agent is doing useful work/);
 });
 

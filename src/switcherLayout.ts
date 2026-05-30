@@ -325,7 +325,6 @@ function detailContent(pane: AgentPane, now: number, home: string | undefined, w
   const assistantValues = fallbackDiscovered ? [lastMessage] : activityLines.length > 0 ? [] : [lastMessage, pane.currentAction];
   const assistantLines = uniqueDetailText(assistantValues)
     .flatMap((value) => wrapText(value, messageWidth, 5).map((line) => `${bold('▌', useColor)} ${line}`));
-  const terminalPreviewLines = previewLines(pane.terminalPreview, messageWidth, 12);
   const command = terminalTargetCommand(pane.target);
   const pid = terminalTargetPid(pane.target);
   const cwd = pane.cwd ? shortPath(pane.cwd, home) : undefined;
@@ -352,7 +351,6 @@ function detailContent(pane: AgentPane, now: number, home: string | undefined, w
       labelledLine('command', command),
       pid === undefined ? undefined : labelledLine('pid', String(pid)),
     ], useColor),
-    detailSection('Terminal preview', terminalPreviewLines, useColor),
     detailSection('Actions', ['enter     activate pane', 'q         quit'], useColor),
   ]);
 }
@@ -375,7 +373,15 @@ function renderWide(groups: RepoGroup[], width: number, height: number, layout: 
   const leftWidth = width - rightWidth - 3;
   const left = pagedList(groups, leftWidth, height, layout, state, selectedPaneId);
   const pane = selectablePanes(groups).find((candidate) => candidate.id === selectedPaneId) ?? selectablePanes(groups)[0]!;
-  const right = boxed('details', detailContent(pane, now, state.home, rightWidth - 2, useColor), rightWidth, height, useColor);
+  const previewContentWidth = rightWidth - 4;
+  const hasPreview = previewLines(pane.terminalPreview, previewContentWidth, 1).length > 0;
+  const previewHeight = hasPreview ? Math.min(16, Math.max(8, Math.floor(height * 0.38))) : 0;
+  const detailsHeight = hasPreview ? Math.max(3, height - previewHeight - 1) : height;
+  const details = boxed('details', detailContent(pane, now, state.home, rightWidth - 2, useColor), rightWidth, detailsHeight, useColor);
+  const preview = hasPreview
+    ? ['', ...boxed('terminal preview', previewLines(pane.terminalPreview, previewContentWidth, Math.max(1, previewHeight - 2)), rightWidth, previewHeight, useColor)]
+    : [];
+  const right = [...details, ...preview];
   return Array.from({ length: height }, (_, index) => `${fit(left[index] || '', leftWidth, useColor)} ${dim('│', useColor)} ${fit(right[index] || '', rightWidth, useColor)}`);
 }
 
