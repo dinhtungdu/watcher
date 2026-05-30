@@ -1,6 +1,6 @@
 # Agent Switcher architecture
 
-Watcher uses explicit Status Hooks as the primary source for Agent Status, with tmux process/title/output heuristics as fallback while the Agent Switcher is open. Hooks call a small `watcher hook <agent> <event>` CLI shim, which reads tmux identity and forwards normalized events to the Watcher Daemon over a local Unix socket. The daemon stores snapshots keyed by tmux pane id; the OpenTUI-based Agent Switcher discovers current panes across all local tmux sessions, hides done panes by default, and activates the selected pane through tmux commands.
+Watcher uses explicit Status Hooks as the primary source for Agent Status, with tmux process/title/output heuristics as fallback while the Agent Switcher is open. Hooks call a small `watcher hook <agent> <event>` CLI shim, which reads tmux identity and forwards normalized events to the Watcher Daemon over a local Unix socket. The daemon stores snapshots keyed by tmux pane id; the Agent Switcher discovers current panes across all local tmux sessions, shows all running agent panes including idle panes, and activates the selected pane through tmux commands.
 
 ## Considered Options
 

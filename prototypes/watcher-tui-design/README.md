@@ -4,7 +4,7 @@ PROTOTYPE — throwaway.
 
 Question: Does a `repo > worktree/branch > sessions` hierarchy make the Watcher Agent Switcher easier to scan while nudging users to activate one session at a time?
 
-Design rule: group worktrees of the same repo together. Each worktree/branch shows all non-terminated Agent Panes. Idle/terminated panes are hidden by default.
+Design rule: group worktrees of the same repo together. Each worktree/branch shows all running Agent Panes, including idle panes. Only panes whose tmux pane no longer exists are hidden.
 
 Coverage: fake data includes one repo with multiple worktrees, branch labels, worktree paths, multiple sessions in one worktree/branch, and non-git path fallback.
 
@@ -18,7 +18,7 @@ Controls:
 
 - `↑/↓` or `j/k`: select Agent Pane
 - `enter`: fake Agent Pane Activation
-- `i`: show/hide idle panes
+- `i`: prototype-only toggle for showing/hiding idle panes; production shows idle running agents
 - `a`: auto responsive layout
 - `1`, `2`, `3`: force narrow, medium, wide layouts
 - `q`: quit

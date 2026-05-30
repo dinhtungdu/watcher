@@ -54,15 +54,15 @@ test('non-git reported panes render under path fallback', async () => {
   assert.match(frame, /Non git task/);
 });
 
-test('stop event changes pane to idle and hides it by default', async () => {
+test('stop event changes pane to idle and keeps the running agent visible', async () => {
   const store = new SnapshotStore();
   await store.recordHookEvent({ agent: 'pi', event: 'prompt-submit', paneId: '%42', payload: { prompt: 'Visible task' }, now: 1_700_000_000_000 }, fixtureRunner());
   await store.recordHookEvent({ agent: 'pi', event: 'stop', paneId: '%42', payload: { lastAssistantMessage: 'Done' }, now: 1_700_000_010_000 }, fixtureRunner());
   const snapshot = store.snapshot(true, 1_700_000_010_000);
   assert.equal(snapshot.panes[0]!.status, 'idle');
   const frame = renderSwitcherFrame(snapshot, 90, 14, { useColor: false }).join('\n');
-  assert.doesNotMatch(frame, /Visible task/);
-  assert.match(frame, /No actionable Agent Panes found/);
+  assert.match(frame, /Done/);
+  assert.match(frame, /idle/);
 });
 
 test('daemon exposes local snapshot API', async () => {

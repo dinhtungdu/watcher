@@ -42,7 +42,7 @@ export interface SwitcherSnapshot {
   now?: number;
 }
 
-export const ACTIONABLE_STATUSES: AgentStatus[] = ['needs_input', 'stalled', 'working', 'unknown'];
+export const ACTIONABLE_STATUSES: AgentStatus[] = ['needs_input', 'stalled', 'working', 'unknown', 'idle'];
 
 export const STATUS_RANK: Record<AgentStatus, number> = {
   needs_input: 0,

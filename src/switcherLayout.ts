@@ -141,7 +141,7 @@ function headerLines(width: number, groups: RepoGroup[], layout: LayoutMode, use
   const worktreeCount = groups.reduce((count, repo) => count + repo.worktrees.length, 0);
   const paneCount = selectablePanes(groups).length;
   return [
-    fit(`${bold('Watcher', useColor)} ${dim(`${groups.length} repos · ${worktreeCount} worktrees · ${paneCount} non-terminated sessions · repo > worktree/branch > sessions · ${layout}`, useColor)}`, width, useColor),
+    fit(`${bold('Watcher', useColor)} ${dim(`${groups.length} repos · ${worktreeCount} worktrees · ${paneCount} running agents · repo > worktree/branch > sessions · ${layout}`, useColor)}`, width, useColor),
     fit(dim(line(width), useColor), width, useColor),
   ];
 }
@@ -151,12 +151,12 @@ function emptyLines(snapshot: SwitcherSnapshot, width: number, height: number, u
     ? 'tmux is not available or no tmux server is running.'
     : !snapshot.daemonAvailable
       ? 'No Watcher Daemon snapshot is available yet.'
-      : 'No actionable Agent Panes found.';
+      : 'No running Agent Panes found.';
   const help = !snapshot.tmuxAvailable
     ? 'Start tmux and run agent panes there; Watcher is local-tmux only.'
     : !snapshot.daemonAvailable
       ? 'Run watcher daemon or install hooks; unhooked discovery arrives in the full switcher.'
-      : 'Idle Agent Panes are hidden by default. Submit work in an agent pane and try again.';
+      : 'Start pi, claude, codex, or aider in a tmux pane and try again.';
   const body = [
     '',
     bold('Nothing to activate', useColor),

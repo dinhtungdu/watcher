@@ -9,6 +9,7 @@ export interface SnapshotOptions {
   now?: number;
   stallTracker?: StallTracker;
   stalledMs?: number;
+  socketPath?: string;
 }
 
 export async function loadSwitcherSnapshot(options: SnapshotOptions = {}): Promise<SwitcherSnapshot> {
@@ -16,7 +17,7 @@ export async function loadSwitcherSnapshot(options: SnapshotOptions = {}): Promi
   const now = options.now ?? Date.now();
   let daemonSnapshot: SwitcherSnapshot | undefined;
   try {
-    const response = await sendDaemonRequest({ type: 'snapshot' }, { timeoutMs: 300 });
+    const response = await sendDaemonRequest({ type: 'snapshot' }, { timeoutMs: 300, socketPath: options.socketPath });
     if (response.ok && response.snapshot) daemonSnapshot = response.snapshot;
   } catch {
     // No daemon yet; render an honest empty state instead of faceplanting like a fragile dashboard goblin.

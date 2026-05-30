@@ -20,16 +20,16 @@ const panes: AgentPane[] = [
   pane({ id: '%1', status: 'working', summary: 'Working in main', git: { repo: 'watcher', branch: 'main', worktreePath: '/Users/tung/work/watcher' }, updatedAt: now - 10_000 }),
   pane({ id: '%2', status: 'needs_input', summary: 'Needs decision', git: { repo: 'watcher', branch: 'feature/tui', worktreePath: '/Users/tung/work/watcher-feature' }, updatedAt: now - 5_000, currentAction: 'waiting for approval', lastMessage: 'Please pick one.' }),
   pane({ id: '%3', status: 'unknown', summary: 'Fallback pane', cwd: '/Users/tung/tmp/spike', updatedAt: now - 1_000 }),
-  pane({ id: '%4', status: 'idle', summary: 'Hidden idle', git: { repo: 'watcher', branch: 'main', worktreePath: '/Users/tung/work/watcher' }, updatedAt: now }),
+  pane({ id: '%4', status: 'idle', summary: 'Visible idle', git: { repo: 'watcher', branch: 'main', worktreePath: '/Users/tung/work/watcher' }, updatedAt: now }),
 ];
 
-test('groups panes as repo > worktree path > rows and hides idle', () => {
+test('groups panes as repo > worktree path > rows and shows idle running agents', () => {
   const groups = groupPanes(panes, now, '/Users/tung');
   assert.equal(groups[0]!.title, 'watcher');
   assert.deepEqual(groups[0]!.worktrees.map((worktree) => worktree.path), ['/Users/tung/work/watcher-feature', '/Users/tung/work/watcher']);
   assert.equal(groups[1]!.title, 'Path fallback');
   assert.equal(groups[1]!.worktrees[0]!.key, 'path:/Users/tung/tmp/spike');
-  assert.equal(selectablePanes(groups).some((candidate) => candidate.id === '%4'), false);
+  assert.equal(selectablePanes(groups).some((candidate) => candidate.id === '%4'), true);
 });
 
 test('prototype row shape stays minimal without status badges or time columns', () => {

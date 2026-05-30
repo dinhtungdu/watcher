@@ -24,11 +24,11 @@ Watcher is a tmux-wide Agent Switcher. It lists actionable agent panes across al
 - `needs_input`: agent needs human input, permission, or decision.
 - `stalled`: agent appears working but has no output/status/title change for 5 minutes.
 - `unknown`: known agent process exists but no reliable status yet.
-- `idle`: agent finished or is inactive; hidden by default.
+- `idle`: agent finished or is inactive; shown for running agent panes so the switcher can activate all agents.
 
 ## Switcher Layout
 
-Show Non-Terminated Agent Panes with statuses `needs_input`, `stalled`, `working`, and `unknown`. Hide `idle` by default.
+Show all running Agent Panes with statuses `needs_input`, `stalled`, `working`, `unknown`, and `idle`. Hide only panes whose tmux pane no longer exists.
 
 Use the final prototype layout: `repo > worktree/branch > sessions`.
 
@@ -44,7 +44,7 @@ Repo and worktree rules:
 - Key Worktree Groups by Git worktree path, not branch name alone.
 - Show branch and worktree path in each Worktree Group header.
 - If repository/worktree metadata is unavailable, use a Path Fallback Group keyed by pane path.
-- Show all Non-Terminated Agent Panes within each Worktree Group.
+- Show all running Agent Panes within each Worktree Group, including `idle` panes.
 
 Each session row should show only:
 
@@ -73,8 +73,8 @@ Responsive layout:
 
 Ordering applies at Repo Group, Worktree Group, and Agent Pane row levels:
 
-1. Repo Groups by highest-priority Non-Terminated Agent Pane, then newest update.
-2. Worktree Groups by highest-priority Non-Terminated Agent Pane, then newest update.
+1. Repo Groups by highest-priority running Agent Pane, then newest update.
+2. Worktree Groups by highest-priority running Agent Pane, then newest update.
 3. Agent Pane rows within a Worktree Group by status priority, then newest update.
 
 Status priority:
@@ -83,6 +83,7 @@ Status priority:
 2. `stalled`
 3. `working`
 4. `unknown`
+5. `idle`
 
 Within the same highest-priority status, newest update first.
 

@@ -4,6 +4,8 @@ import { renderSwitcherFrame } from '../src/switcherLayout.js';
 import { loadSwitcherSnapshot } from '../src/snapshot.js';
 import { CommandRunner } from '../src/tmux.js';
 
+const absentDaemonSocket = '/tmp/watcher-test-empty-missing.sock';
+
 const failingTmux: CommandRunner = {
   async execFile() {
     throw new Error('no tmux');
@@ -17,7 +19,7 @@ const runningTmux: CommandRunner = {
 };
 
 test('empty switcher explains no tmux state', async () => {
-  const snapshot = await loadSwitcherSnapshot({ runner: failingTmux, now: 1_700_000_000_000 });
+  const snapshot = await loadSwitcherSnapshot({ runner: failingTmux, now: 1_700_000_000_000, socketPath: absentDaemonSocket });
   const frame = renderSwitcherFrame(snapshot, 80, 18, { useColor: false });
   const text = frame.join('\n');
   assert.match(text, /Watcher/);
@@ -27,7 +29,7 @@ test('empty switcher explains no tmux state', async () => {
 });
 
 test('empty switcher explains daemon snapshot absence when tmux exists', async () => {
-  const snapshot = await loadSwitcherSnapshot({ runner: runningTmux, now: 1_700_000_000_000 });
+  const snapshot = await loadSwitcherSnapshot({ runner: runningTmux, now: 1_700_000_000_000, socketPath: absentDaemonSocket });
   const frame = renderSwitcherFrame(snapshot, 90, 18, { useColor: false });
   const text = frame.join('\n');
   assert.match(text, /No Watcher Daemon snapshot is available yet/);
@@ -38,5 +40,5 @@ test('empty switcher renders at least terminal-sized frame', () => {
   const frame = renderSwitcherFrame({ panes: [], daemonAvailable: true, tmuxAvailable: true, now: 1_700_000_000_000 }, 70, 5, { useColor: false });
   assert.equal(frame.length, 10);
   assert.ok(frame.every((line) => line.length >= 70));
-  assert.match(frame.join('\n'), /No actionable Agent Panes found/);
+  assert.match(frame.join('\n'), /No running Agent Panes found/);
 });
