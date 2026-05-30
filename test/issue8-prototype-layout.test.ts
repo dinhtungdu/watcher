@@ -64,6 +64,20 @@ test('wide layout has rich right detail pane', () => {
   assert.match(frame, /needs_input · 5s/);
 });
 
+test('renderer never emits embedded newlines from pane text', () => {
+  const noisy = [pane({
+    id: '%9',
+    status: 'idle',
+    summary: 'first line\nsecond line',
+    lastMessage: 'assistant said\nway too much',
+    currentAction: 'tool\ninput',
+  })];
+  const frame = renderSwitcherFrame({ panes: noisy, daemonAvailable: true, tmuxAvailable: true, now }, 100, 18, { useColor: false, selectedPaneId: '%9' });
+  assert.equal(frame.length, 18);
+  assert.equal(frame.every((line) => !line.includes('\n') && visibleLength(line) === 100), true);
+  assert.match(frame.join('\n'), /first line second line/);
+});
+
 test('medium and narrow layouts collapse to list-first selected summary', () => {
   const medium = renderSwitcherFrame({ panes, daemonAvailable: true, tmuxAvailable: true, now }, 90, 18, { useColor: false, home: '/Users/tung', selectedPaneId: '%2' }).join('\n');
   const narrow = renderSwitcherFrame({ panes, daemonAvailable: true, tmuxAvailable: true, now }, 60, 18, { useColor: false, home: '/Users/tung', selectedPaneId: '%2' }).join('\n');

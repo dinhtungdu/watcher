@@ -38,9 +38,13 @@ export function selected(value: unknown, useColor: boolean): string {
   return paint(ansi.selected, value, useColor);
 }
 
+export function singleLine(value: unknown): string {
+  return String(value).replace(/[\r\n\t]+/g, ' ');
+}
+
 export function clip(value: unknown, width: number, useColor = false): string {
   if (width <= 0) return '';
-  const text = String(value);
+  const text = singleLine(value);
   if (visibleLength(text) <= width) return text;
   if (width === 1) return '…';
   let out = '';
