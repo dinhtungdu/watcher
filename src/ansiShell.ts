@@ -2,8 +2,11 @@ import { loadSwitcherSnapshot } from './snapshot.js';
 import { groupPanes, moveSelection, renderSwitcherFrame, selectablePanes, SwitcherRenderState } from './switcherLayout.js';
 import { createStallTracker } from './stalled.js';
 import { activateAgentPane } from './activation.js';
-import { AgentPane } from './model.js';
+import { AgentPane, SwitcherSnapshot } from './model.js';
 import { loadChromeHiddenPreference, saveChromeHiddenPreference } from './tmuxPreferences.js';
+
+const SNAPSHOT_REFRESH_MS = 2000;
+const FRAME_REPAINT_MS = 250;
 
 function terminalSize(): { width: number; height: number } {
   return {
@@ -20,6 +23,7 @@ export async function runAnsiSwitcher(): Promise<void> {
     chromeHidden: await loadChromeHiddenPreference(),
   };
   const stallTracker = createStallTracker();
+  let currentSnapshot: SwitcherSnapshot | undefined;
   let currentPanes = [] as ReturnType<typeof selectablePanes>;
   let pendingActivation: AgentPane | undefined;
   let closed = false;
@@ -27,21 +31,28 @@ export async function runAnsiSwitcher(): Promise<void> {
   const closedPromise = new Promise<void>((resolve) => {
     resolveClosed = resolve;
   });
-  let redrawInFlight = false;
+  let refreshInFlight = false;
   let pendingPreferenceSave: Promise<void> | undefined;
+  let refreshInterval: ReturnType<typeof setInterval> | undefined;
+  let repaintInterval: ReturnType<typeof setInterval> | undefined;
 
-  async function redraw(): Promise<void> {
-    if (closed || redrawInFlight) return;
-    redrawInFlight = true;
+  function renderCachedFrame(): void {
+    if (closed || !currentSnapshot) return;
+    state.frameIndex = (state.frameIndex ?? 0) + 1;
+    currentPanes = selectablePanes(groupPanes(currentSnapshot.panes, currentSnapshot.now, state.home));
+    const { width, height } = terminalSize();
+    const frame = renderSwitcherFrame(currentSnapshot, width, height, state).join('\n');
+    process.stdout.write(`\x1b[2J\x1b[H${frame}`);
+  }
+
+  async function refreshSnapshot(): Promise<void> {
+    if (closed || refreshInFlight) return;
+    refreshInFlight = true;
     try {
-      state.frameIndex = (state.frameIndex ?? 0) + 1;
-      const snapshot = await loadSwitcherSnapshot({ stallTracker });
-      currentPanes = selectablePanes(groupPanes(snapshot.panes, snapshot.now, state.home));
-      const { width, height } = terminalSize();
-      const frame = renderSwitcherFrame(snapshot, width, height, state).join('\n');
-      process.stdout.write(`\x1b[2J\x1b[H${frame}`);
+      currentSnapshot = await loadSwitcherSnapshot({ stallTracker });
+      renderCachedFrame();
     } finally {
-      redrawInFlight = false;
+      refreshInFlight = false;
     }
   }
 
@@ -53,7 +64,8 @@ export async function runAnsiSwitcher(): Promise<void> {
   function shutdown(): void {
     if (closed) return;
     closed = true;
-    clearInterval(interval);
+    if (refreshInterval) clearInterval(refreshInterval);
+    if (repaintInterval) clearInterval(repaintInterval);
     process.stdout.off('resize', resizeHandler);
     process.stdin.off('data', inputHandler);
     process.stdin.pause();
@@ -67,14 +79,14 @@ export async function runAnsiSwitcher(): Promise<void> {
   }
 
   function resizeHandler(): void {
-    void redraw();
+    renderCachedFrame();
   }
 
   function toggleChrome(): void {
     state.chromeHidden = !state.chromeHidden;
     pendingPreferenceSave = saveChromeHiddenPreference(Boolean(state.chromeHidden));
     void pendingPreferenceSave;
-    void redraw();
+    renderCachedFrame();
   }
 
   function inputHandler(buffer: Buffer): void {
@@ -85,12 +97,12 @@ export async function runAnsiSwitcher(): Promise<void> {
     }
     if (input === '\x1b[A' || input === 'k') {
       state.selectedPaneId = moveSelection(currentPanes, state.selectedPaneId, -1);
-      void redraw();
+      renderCachedFrame();
       return;
     }
     if (input === '\x1b[B' || input === 'j') {
       state.selectedPaneId = moveSelection(currentPanes, state.selectedPaneId, 1);
-      void redraw();
+      renderCachedFrame();
       return;
     }
     if (input === '?') {
@@ -109,8 +121,9 @@ export async function runAnsiSwitcher(): Promise<void> {
   process.stdin.on('data', inputHandler);
   process.stdout.on('resize', resizeHandler);
   process.once('SIGINT', sigintHandler);
-  const interval = setInterval(() => void redraw(), 250);
-  await redraw();
+  refreshInterval = setInterval(() => void refreshSnapshot(), SNAPSHOT_REFRESH_MS);
+  repaintInterval = setInterval(() => renderCachedFrame(), FRAME_REPAINT_MS);
+  await refreshSnapshot();
 
   await closedPromise;
   await pendingPreferenceSave;
