@@ -1,7 +1,7 @@
 import { test } from 'bun:test';
 import assert from 'node:assert/strict';
 import { AgentPane } from '../src/model.js';
-import { groupPanes, moveSelection, renderSwitcherFrame, selectablePanes } from '../src/switcherLayout.js';
+import { groupPanes, initialSelectionAfterLastActivated, moveSelection, renderSwitcherFrame, selectablePanes } from '../src/switcherLayout.js';
 import { tmuxTarget } from '../src/terminalTarget.js';
 import { stripAnsi, visibleLength } from '../src/text.js';
 
@@ -165,4 +165,13 @@ test('keyboard selection helper supports j/k style movement over rows only', () 
   const rows = selectablePanes(groupPanes(panes, now, '/Users/tung'));
   assert.equal(moveSelection(rows, '%2', 1), '%1');
   assert.equal(moveSelection(rows, '%1', -1), '%2');
+});
+
+test('initial selection starts after the last activated pane and skips idle when possible', () => {
+  const rows = selectablePanes(groupPanes(panes, now, '/Users/tung'));
+  assert.deepEqual(rows.map((row) => row.id), ['%2', '%1', '%4', '%3']);
+  assert.equal(initialSelectionAfterLastActivated(rows, '%2'), '%1');
+  assert.equal(initialSelectionAfterLastActivated(rows, '%1'), '%3');
+  assert.equal(initialSelectionAfterLastActivated(rows, '%99'), '%2');
+  assert.equal(initialSelectionAfterLastActivated([pane({ id: '%9', status: 'idle', summary: 'Only idle' })], '%9'), '%9');
 });

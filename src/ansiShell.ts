@@ -1,9 +1,9 @@
 import { loadSwitcherSnapshot } from './snapshot.js';
-import { groupPanes, moveSelection, renderSwitcherFrame, selectablePanes, SwitcherRenderState } from './switcherLayout.js';
+import { groupPanes, initialSelectionAfterLastActivated, moveSelection, renderSwitcherFrame, selectablePanes, SwitcherRenderState } from './switcherLayout.js';
 import { createStallTracker } from './stalled.js';
 import { activateAgentPane } from './activation.js';
 import { AgentPane, SwitcherSnapshot } from './model.js';
-import { loadChromeHiddenPreference, saveChromeHiddenPreference } from './tmuxPreferences.js';
+import { loadChromeHiddenPreference, loadLastActivatedPanePreference, saveChromeHiddenPreference, saveLastActivatedPanePreference } from './tmuxPreferences.js';
 
 const SNAPSHOT_REFRESH_MS = 2000;
 const FRAME_REPAINT_MS = 250;
@@ -17,10 +17,15 @@ function terminalSize(): { width: number; height: number } {
 
 export async function runAnsiSwitcher(): Promise<void> {
   // Render the accepted prototype-style ANSI frame directly under Bun.
+  const [chromeHidden, lastActivatedPaneId] = await Promise.all([
+    loadChromeHiddenPreference(),
+    loadLastActivatedPanePreference(),
+  ]);
+  let initialSelectionApplied = false;
   let state: SwitcherRenderState = {
     useColor: Boolean(process.stdout.isTTY && !process.env.NO_COLOR),
     home: process.env.HOME,
-    chromeHidden: await loadChromeHiddenPreference(),
+    chromeHidden,
   };
   const stallTracker = createStallTracker();
   let currentSnapshot: SwitcherSnapshot | undefined;
@@ -32,14 +37,23 @@ export async function runAnsiSwitcher(): Promise<void> {
     resolveClosed = resolve;
   });
   let refreshInFlight = false;
-  let pendingPreferenceSave: Promise<void> | undefined;
+  const pendingPreferenceSaves: Promise<void>[] = [];
   let refreshInterval: ReturnType<typeof setInterval> | undefined;
   let repaintInterval: ReturnType<typeof setInterval> | undefined;
+
+  function queuePreferenceSave(save: Promise<void>): void {
+    pendingPreferenceSaves.push(save);
+    void save;
+  }
 
   function renderCachedFrame(): void {
     if (closed || !currentSnapshot) return;
     state.frameIndex = (state.frameIndex ?? 0) + 1;
     currentPanes = selectablePanes(groupPanes(currentSnapshot.panes, currentSnapshot.now, state.home));
+    if (currentPanes.length > 0 && !currentPanes.some((pane) => pane.id === state.selectedPaneId)) {
+      state.selectedPaneId = initialSelectionApplied ? currentPanes[0]?.id : initialSelectionAfterLastActivated(currentPanes, lastActivatedPaneId);
+      initialSelectionApplied = true;
+    }
     const { width, height } = terminalSize();
     const frame = renderSwitcherFrame(currentSnapshot, width, height, state).join('\n');
     process.stdout.write(`\x1b[2J\x1b[H${frame}`);
@@ -84,8 +98,7 @@ export async function runAnsiSwitcher(): Promise<void> {
 
   function toggleChrome(): void {
     state.chromeHidden = !state.chromeHidden;
-    pendingPreferenceSave = saveChromeHiddenPreference(Boolean(state.chromeHidden));
-    void pendingPreferenceSave;
+    queuePreferenceSave(saveChromeHiddenPreference(Boolean(state.chromeHidden)));
     renderCachedFrame();
   }
 
@@ -111,6 +124,7 @@ export async function runAnsiSwitcher(): Promise<void> {
     }
     if (input === '\r' || input === '\n') {
       pendingActivation = currentPanes.find((pane) => pane.id === state.selectedPaneId) ?? currentPanes[0];
+      if (pendingActivation) queuePreferenceSave(saveLastActivatedPanePreference(pendingActivation.id));
       shutdown();
     }
   }
@@ -126,7 +140,7 @@ export async function runAnsiSwitcher(): Promise<void> {
   await refreshSnapshot();
 
   await closedPromise;
-  await pendingPreferenceSave;
+  await Promise.all(pendingPreferenceSaves);
 
   if (pendingActivation) await activateAgentPane(pendingActivation);
 }

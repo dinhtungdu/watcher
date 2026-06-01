@@ -145,6 +145,19 @@ export function moveSelection(panes: AgentPane[], currentPaneId: string | undefi
   return panes[(index + delta + panes.length) % panes.length]?.id;
 }
 
+export function initialSelectionAfterLastActivated(panes: AgentPane[], lastActivatedPaneId: string | undefined): string | undefined {
+  if (panes.length === 0) return undefined;
+  const candidates = panes.some((pane) => pane.status !== 'idle') ? panes.filter((pane) => pane.status !== 'idle') : panes;
+  const candidateIds = new Set(candidates.map((pane) => pane.id));
+  const startIndex = panes.findIndex((pane) => pane.id === lastActivatedPaneId);
+  if (startIndex < 0) return candidates[0]?.id;
+  for (let offset = 1; offset <= panes.length; offset++) {
+    const pane = panes[(startIndex + offset) % panes.length];
+    if (pane && candidateIds.has(pane.id)) return pane.id;
+  }
+  return candidates[0]?.id;
+}
+
 function headerLines(width: number, groups: RepoGroup[], layout: LayoutMode, useColor: boolean): string[] {
   const worktreeCount = groups.reduce((count, repo) => count + repo.worktrees.length, 0);
   const paneCount = selectablePanes(groups).length;
