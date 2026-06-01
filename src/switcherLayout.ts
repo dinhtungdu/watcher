@@ -12,6 +12,7 @@ export interface SwitcherRenderState {
   layoutOverride?: LayoutMode;
   home?: string;
   frameIndex?: number;
+  chromeHidden?: boolean;
 }
 
 interface PaneGroupInfo {
@@ -390,7 +391,7 @@ function stateModeLabel(layout: LayoutMode): string {
 }
 
 function helpLines(width: number, layout: LayoutMode, selectedPane: AgentPane | undefined, useColor: boolean, home?: string): string[] {
-  const keys = width < 72 ? '↑/↓ select · enter activate · q quit' : '↑/↓ or j/k select · enter activate · q quit';
+  const keys = width < 72 ? '↑/↓ select · enter activate · ? hide · q quit' : '↑/↓ or j/k select · enter activate · ? hide summary/help · q quit';
   if (layout === 'wide' || !selectedPane) return [fit(dim(line(width), useColor), width, useColor), fit(dim(keys, useColor), width, useColor)];
   const group = paneGroup(selectedPane, home);
   const label = group.isGit ? `${group.repoTitle} · ${group.branch} · ${shortPath(group.path, home)}` : `${shortPath(group.path, home)}`;
@@ -416,9 +417,9 @@ export function renderSwitcherFrame(snapshot: SwitcherSnapshot, width: number, h
   const now = snapshot.now ?? Date.now();
   const layout = chooseLayout(width, state.layoutOverride);
   const groups = groupPanes(snapshot.panes, now, state.home);
-  const header = headerLines(width, groups, layout, useColor);
+  const header = state.chromeHidden ? [] : headerLines(width, groups, layout, useColor);
   if (groups.length === 0) {
-    const help = [fit(dim(line(width), useColor), width, useColor), fit(dim('q / Esc / Ctrl-C quits', useColor), width, useColor)];
+    const help = state.chromeHidden ? [] : [fit(dim(line(width), useColor), width, useColor), fit(dim('q / Esc / Ctrl-C quits', useColor), width, useColor)];
     const body = emptyLines(snapshot, width, Math.max(1, height - header.length - help.length), useColor);
     return finalizeFrame([...header, ...body, ...help], width, height, useColor);
   }
@@ -426,7 +427,7 @@ export function renderSwitcherFrame(snapshot: SwitcherSnapshot, width: number, h
   const selectedPaneId = panes.some((pane) => pane.id === state.selectedPaneId) ? state.selectedPaneId! : panes[0]!.id;
   state.selectedPaneId = selectedPaneId;
   const selectedPane = panes.find((pane) => pane.id === selectedPaneId);
-  const help = helpLines(width, layout, selectedPane, useColor, state.home);
+  const help = state.chromeHidden ? [] : helpLines(width, layout, selectedPane, useColor, state.home);
   const bodyHeight = Math.max(1, height - header.length - help.length);
   const body = layout === 'wide'
     ? renderWide(groups, width, bodyHeight, layout, state, selectedPaneId, now)

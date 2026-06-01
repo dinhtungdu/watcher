@@ -71,6 +71,7 @@ Selected Agent Pane details should show:
 
 Responsive layout:
 
+- `?` toggles the top summary and bottom keyboard help; the preference is stored in tmux option `@watcher-hide-chrome`
 - wide terminals: list on the left with a large details pane on the right
 - medium/narrow terminals: list-first layout with selected summary at the bottom
 - selected row: full-width, theme-adaptive reverse highlight; no hardcoded colors and no selection triangle

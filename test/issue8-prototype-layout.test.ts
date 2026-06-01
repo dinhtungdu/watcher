@@ -42,6 +42,14 @@ test('prototype row shape stays minimal without status badges or time columns', 
   assert.doesNotMatch(row, /▶|▸|>/);
 });
 
+test('chrome can hide the top summary and bottom keyboard help while keeping rows visible', () => {
+  const frame = renderSwitcherFrame({ panes, daemonAvailable: true, tmuxAvailable: true, now }, 90, 18, { useColor: false, home: '/Users/tung', selectedPaneId: '%2', chromeHidden: true }).join('\n');
+  assert.doesNotMatch(frame, /Watcher/);
+  assert.doesNotMatch(frame, /selected s:1\.1/);
+  assert.doesNotMatch(frame, /enter activate/);
+  assert.match(frame, /Needs decision/);
+});
+
 test('selected row uses full-width reverse highlight without hardcoded color', () => {
   const frame = renderSwitcherFrame({ panes, daemonAvailable: true, tmuxAvailable: true, now }, 90, 18, { useColor: true, home: '/Users/tung', selectedPaneId: '%2' });
   const selected = frame.find((line) => stripAnsi(line).includes('Needs decision')) ?? '';

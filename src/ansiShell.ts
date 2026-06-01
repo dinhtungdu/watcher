@@ -3,6 +3,7 @@ import { groupPanes, moveSelection, renderSwitcherFrame, selectablePanes, Switch
 import { createStallTracker } from './stalled.js';
 import { activateAgentPane } from './activation.js';
 import { AgentPane } from './model.js';
+import { loadChromeHiddenPreference, saveChromeHiddenPreference } from './tmuxPreferences.js';
 
 function terminalSize(): { width: number; height: number } {
   return {
@@ -16,6 +17,7 @@ export async function runAnsiSwitcher(): Promise<void> {
   let state: SwitcherRenderState = {
     useColor: Boolean(process.stdout.isTTY && !process.env.NO_COLOR),
     home: process.env.HOME,
+    chromeHidden: await loadChromeHiddenPreference(),
   };
   const stallTracker = createStallTracker();
   let currentPanes = [] as ReturnType<typeof selectablePanes>;
@@ -26,6 +28,7 @@ export async function runAnsiSwitcher(): Promise<void> {
     resolveClosed = resolve;
   });
   let redrawInFlight = false;
+  let pendingPreferenceSave: Promise<void> | undefined;
 
   async function redraw(): Promise<void> {
     if (closed || redrawInFlight) return;
@@ -67,6 +70,13 @@ export async function runAnsiSwitcher(): Promise<void> {
     void redraw();
   }
 
+  function toggleChrome(): void {
+    state.chromeHidden = !state.chromeHidden;
+    pendingPreferenceSave = saveChromeHiddenPreference(Boolean(state.chromeHidden));
+    void pendingPreferenceSave;
+    void redraw();
+  }
+
   function inputHandler(buffer: Buffer): void {
     const input = buffer.toString('utf8');
     if (input === '\u0003' || input === 'q' || input === '\x1b') {
@@ -81,6 +91,10 @@ export async function runAnsiSwitcher(): Promise<void> {
     if (input === '\x1b[B' || input === 'j') {
       state.selectedPaneId = moveSelection(currentPanes, state.selectedPaneId, 1);
       void redraw();
+      return;
+    }
+    if (input === '?') {
+      toggleChrome();
       return;
     }
     if (input === '\r' || input === '\n') {
@@ -99,6 +113,7 @@ export async function runAnsiSwitcher(): Promise<void> {
   await redraw();
 
   await closedPromise;
+  await pendingPreferenceSave;
 
   if (pendingActivation) await activateAgentPane(pendingActivation);
 }
