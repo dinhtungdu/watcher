@@ -107,7 +107,7 @@ No ghost panes: if a tmux pane no longer exists, hide it.
 
 ## Activation
 
-- After activating an Agent Pane, save its canonical id in tmux option `@watcher-last-activated-pane`; the next switcher open should initially select the next non-idle Agent Pane after it, falling back to idle panes only when all panes are idle.
+- After activating an Agent Pane, save its canonical id in tmux option `@watcher-last-activated-pane`; the next switcher open should initially avoid that pane when any other Agent Pane exists, selecting the next non-idle Agent Pane after it and falling back to another idle pane when it is the only non-idle pane.
 - tmux inside tmux: switch client to target session, select target window, select target pane.
 - tmux outside tmux: select target window/pane first, then attach to target session.
 - Use tmux pane ids like `%42`.

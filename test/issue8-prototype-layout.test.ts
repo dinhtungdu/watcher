@@ -175,3 +175,11 @@ test('initial selection starts after the last activated pane and skips idle when
   assert.equal(initialSelectionAfterLastActivated(rows, '%99'), '%2');
   assert.equal(initialSelectionAfterLastActivated([pane({ id: '%9', status: 'idle', summary: 'Only idle' })], '%9'), '%9');
 });
+
+test('initial selection avoids the last activated pane even when it is the only non-idle pane', () => {
+  const rows = [
+    pane({ id: '%1', status: 'working', summary: 'Current agent' }),
+    pane({ id: '%2', status: 'idle', summary: 'Other idle' }),
+  ];
+  assert.equal(initialSelectionAfterLastActivated(rows, '%1'), '%2');
+});

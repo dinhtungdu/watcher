@@ -147,7 +147,9 @@ export function moveSelection(panes: AgentPane[], currentPaneId: string | undefi
 
 export function initialSelectionAfterLastActivated(panes: AgentPane[], lastActivatedPaneId: string | undefined): string | undefined {
   if (panes.length === 0) return undefined;
-  const candidates = panes.some((pane) => pane.status !== 'idle') ? panes.filter((pane) => pane.status !== 'idle') : panes;
+  if (panes.length === 1) return panes[0]?.id;
+  const otherPanes = lastActivatedPaneId ? panes.filter((pane) => pane.id !== lastActivatedPaneId) : panes;
+  const candidates = otherPanes.some((pane) => pane.status !== 'idle') ? otherPanes.filter((pane) => pane.status !== 'idle') : otherPanes;
   const candidateIds = new Set(candidates.map((pane) => pane.id));
   const startIndex = panes.findIndex((pane) => pane.id === lastActivatedPaneId);
   if (startIndex < 0) return candidates[0]?.id;
