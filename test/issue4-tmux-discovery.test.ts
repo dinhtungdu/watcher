@@ -2,6 +2,7 @@ import { test } from 'bun:test';
 import assert from 'node:assert/strict';
 import { CommandRunner } from '../src/tmux.js';
 import { observeTerminalAgentPanes } from '../src/discovery.js';
+import { detectAgentFromProcess } from '../src/agents/registry.js';
 import { renderSwitcherFrame } from '../src/switcherLayout.js';
 
 export function discoveryRunner(): CommandRunner {
@@ -15,6 +16,7 @@ export function discoveryRunner(): CommandRunner {
             '%3\tlab\t2\t0\t/Users/tung/tmp/spike\t103\tbash\tthree',
             '%4\tshell\t1\t0\t/Users/tung\t104\tzsh\tfour',
             '%5\topen\t0\t0\t/Users/tung/work/opencode\t105\topencode\tfive',
+            '%6\twatcher\t0\t2\t/Users/tung/work/watcher-sidekick\t106\tnode\tsix',
           ].join('\n') + '\n',
           stderr: '',
         };
@@ -29,8 +31,15 @@ export function discoveryRunner(): CommandRunner {
         throw new Error('no children');
       }
       if (file === 'ps') {
-        if (args[1] === '202') return { stdout: 'claude\n', stderr: '' };
-        if (args[1] === '203') return { stdout: 'codex\n', stderr: '' };
+        const pid = args[1];
+        const field = args[3];
+        const processes: Record<string, Record<string, string>> = {
+          '106': { 'comm=': 'pi\n', 'args=': 'pi\n' },
+          '202': { 'comm=': 'claude\n', 'args=': 'claude\n' },
+          '203': { 'comm=': 'codex\n', 'args=': 'codex\n' },
+        };
+        const stdout = processes[pid]?.[field];
+        if (stdout) return { stdout, stderr: '' };
       }
       if (file === 'git') {
         const cwd = args[1];
@@ -45,7 +54,15 @@ export function discoveryRunner(): CommandRunner {
   };
 }
 
-test('tmux observation detects direct and one-level child agent processes', async () => {
+test('process detection supports direct commands and Linux JavaScript shebang wrappers without matching random node apps', () => {
+  assert.equal(detectAgentFromProcess({ command: 'pi' }), 'pi');
+  assert.equal(detectAgentFromProcess({ command: 'node', args: 'node /usr/local/bin/pi' }), 'pi');
+  assert.equal(detectAgentFromProcess({ command: 'node', args: 'node --max-old-space-size=8192 /usr/local/bin/codex' }), 'codex');
+  assert.equal(detectAgentFromProcess({ command: 'node', args: 'node /tmp/app.js' }), undefined);
+  assert.equal(detectAgentFromProcess({ command: 'node', args: 'node --require pi /tmp/app.js' }), undefined);
+});
+
+test('tmux observation detects direct, pane-pid, and one-level child agent processes', async () => {
   const result = await observeTerminalAgentPanes(discoveryRunner(), 1_700_000_000_000);
   assert.equal(result.tmuxAvailable, true);
   assert.deepEqual(result.discoveredPanes.map((pane) => [pane.id, pane.agentType, pane.status]), [
@@ -53,14 +70,15 @@ test('tmux observation detects direct and one-level child agent processes', asyn
     ['tmux:%2', 'claude', 'unknown'],
     ['tmux:%3', 'codex', 'unknown'],
     ['tmux:%5', 'opencode', 'unknown'],
+    ['tmux:%6', 'pi', 'unknown'],
   ]);
   assert.equal(result.discoveredPanes.find((pane) => pane.id === 'tmux:%1')?.terminalPreview, 'recent output for %1\nagent is doing useful work');
   assert.equal(result.discoveredPanes.find((pane) => pane.id === 'tmux:%2')?.terminalPreview, undefined);
   assert.equal(result.discoveredPanes.find((pane) => pane.id === 'tmux:%1')?.observation?.terminalPreview, true);
   assert.equal(result.discoveredPanes.find((pane) => pane.id === 'tmux:%2')?.observation?.terminalPreview, false);
   assert.equal(result.discoveredPanes.some((pane) => pane.id === 'tmux:%4'), false);
-  assert.deepEqual([...result.livePaneIds].sort(), ['tmux:%1', 'tmux:%2', 'tmux:%3', 'tmux:%4', 'tmux:%5']);
-  assert.deepEqual([...result.liveAgentProcessPaneIds].sort(), ['tmux:%1', 'tmux:%2', 'tmux:%3', 'tmux:%5']);
+  assert.deepEqual([...result.livePaneIds].sort(), ['tmux:%1', 'tmux:%2', 'tmux:%3', 'tmux:%4', 'tmux:%5', 'tmux:%6']);
+  assert.deepEqual([...result.liveAgentProcessPaneIds].sort(), ['tmux:%1', 'tmux:%2', 'tmux:%3', 'tmux:%5', 'tmux:%6']);
 });
 
 test('terminal-observed panes carry grouping metadata and path fallback', async () => {

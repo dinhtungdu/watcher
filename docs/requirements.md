@@ -96,7 +96,7 @@ Within the same highest-priority status, newest update first.
 While the switcher is open, tmux discovery should:
 
 - poll `tmux list-panes -a` every 2 seconds
-- detect known agent processes by pane command and one-level process tree scan from `pane_pid`
+- detect known agent processes by pane command, `pane_pid` process metadata, and one-level process tree scan from `pane_pid`
 - capture pane tail/hash for candidate agent panes only
 - derive `stalled` when status is `working` and no Watcher Agent Event, title, or output change occurs for 5 minutes
 
