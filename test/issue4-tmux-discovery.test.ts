@@ -62,28 +62,29 @@ test('process detection supports direct commands and Linux JavaScript shebang wr
   assert.equal(detectAgentFromProcess({ command: 'node', args: 'node --require pi /tmp/app.js' }), undefined);
 });
 
-test('tmux observation detects direct, pane-pid, and one-level child agent processes', async () => {
+test('tmux observation detects agent processes and idle shell panes', async () => {
   const result = await observeTerminalAgentPanes(discoveryRunner(), 1_700_000_000_000);
   assert.equal(result.tmuxAvailable, true);
-  assert.deepEqual(result.discoveredPanes.map((pane) => [pane.id, pane.agentType, pane.status]), [
-    ['tmux:%1', 'pi', 'unknown'],
-    ['tmux:%2', 'claude', 'unknown'],
-    ['tmux:%3', 'codex', 'unknown'],
-    ['tmux:%5', 'opencode', 'unknown'],
-    ['tmux:%6', 'pi', 'unknown'],
+  assert.deepEqual(result.discoveredPanes.map((pane) => [pane.id, pane.agentType, pane.status, pane.summary]), [
+    ['tmux:%1', 'pi', 'unknown', 'Waiting for first Watcher event'],
+    ['tmux:%2', 'claude', 'unknown', 'Detected claude process'],
+    ['tmux:%3', 'codex', 'unknown', 'Detected codex process'],
+    ['tmux:%4', undefined, 'idle', 'four'],
+    ['tmux:%5', 'opencode', 'unknown', 'Detected opencode process'],
+    ['tmux:%6', 'pi', 'unknown', 'Waiting for first Watcher event'],
   ]);
   assert.equal(result.discoveredPanes.find((pane) => pane.id === 'tmux:%1')?.terminalPreview, 'recent output for %1\nagent is doing useful work');
   assert.equal(result.discoveredPanes.find((pane) => pane.id === 'tmux:%2')?.terminalPreview, undefined);
   assert.equal(result.discoveredPanes.find((pane) => pane.id === 'tmux:%1')?.observation?.terminalPreview, true);
   assert.equal(result.discoveredPanes.find((pane) => pane.id === 'tmux:%2')?.observation?.terminalPreview, false);
-  assert.equal(result.discoveredPanes.some((pane) => pane.id === 'tmux:%4'), false);
   assert.deepEqual([...result.livePaneIds].sort(), ['tmux:%1', 'tmux:%2', 'tmux:%3', 'tmux:%4', 'tmux:%5', 'tmux:%6']);
   assert.deepEqual([...result.liveAgentProcessPaneIds].sort(), ['tmux:%1', 'tmux:%2', 'tmux:%3', 'tmux:%5', 'tmux:%6']);
 });
 
-test('terminal-observed panes carry grouping metadata and path fallback', async () => {
+test('terminal-observed panes carry grouping metadata and default to agent-only rendering', async () => {
   const result = await observeTerminalAgentPanes(discoveryRunner(), 1_700_000_000_000);
   const frame = renderSwitcherFrame({ panes: result.discoveredPanes, daemonAvailable: false, tmuxAvailable: true, now: 1_700_000_010_000 }, 120, 24, { useColor: false, home: '/Users/tung' }).join('\n');
+  assert.match(frame, /agents/);
   assert.match(frame, /watcher/);
   assert.match(frame, /main ~\/work\/watcher/);
   assert.match(frame, /feature\/tui ~\/work\/watcher-feature/);
@@ -94,6 +95,11 @@ test('terminal-observed panes carry grouping metadata and path fallback', async 
   assert.match(frame, /● codex\s+Detected codex process/);
   assert.doesNotMatch(frame, /aider/);
   assert.match(frame, /Detected opencode process/);
+  assert.doesNotMatch(frame, /● zsh\s+four/);
   assert.match(frame, /terminal preview/);
   assert.match(frame, /agent is doing useful work/);
+
+  const allFrame = renderSwitcherFrame({ panes: result.discoveredPanes, daemonAvailable: false, tmuxAvailable: true, now: 1_700_000_010_000 }, 120, 24, { useColor: false, home: '/Users/tung', paneFilter: 'all' }).join('\n');
+  assert.match(allFrame, /all/);
+  assert.match(allFrame, /● zsh\s+four/);
 });

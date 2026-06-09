@@ -33,6 +33,7 @@ async function readDaemonSnapshot(socketPath: string | undefined): Promise<Switc
 function daemonPaneIsRunning(pane: AgentPane, observation: TerminalAgentObservation): boolean {
   if (!observation.tmuxAvailable) return true;
   if (!observation.livePaneIds.has(pane.id)) return false;
+  if (!pane.agentType) return true;
   return observation.liveAgentProcessPaneIds.has(pane.id);
 }
 

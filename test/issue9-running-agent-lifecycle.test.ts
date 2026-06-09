@@ -1,6 +1,5 @@
 import { test } from 'bun:test';
 import assert from 'node:assert/strict';
-import os from 'node:os';
 import path from 'node:path';
 import { SnapshotStore, startDaemon } from '../src/daemon.js';
 import { loadSwitcherSnapshot } from '../src/snapshot.js';
@@ -46,8 +45,10 @@ function failingTmuxRunner(): CommandRunner {
   };
 }
 
+let socketCounter = 0;
+
 async function withDaemon<T>(store: SnapshotStore, runner: CommandRunner, fn: (socketPath: string) => Promise<T>): Promise<T> {
-  const socketPath = path.join(os.tmpdir(), `watcher-lifecycle-${process.pid}-${Date.now()}-${Math.random()}.sock`);
+  const socketPath = path.join('/tmp', `watcher-lc-${process.pid}-${socketCounter++}.sock`);
   const server = await startDaemon({ socketPath, runner, store });
   try {
     return await fn(socketPath);
@@ -82,14 +83,17 @@ test('running Agent Pane lifecycle drops daemon panes whose terminal surface van
   });
 });
 
-test('running Agent Pane lifecycle drops event-sourced panes when the agent process exits but the shell pane remains', async () => {
+test('running Agent Pane lifecycle replaces exited agent state with the remaining idle shell pane', async () => {
   const runner = lifecycleRunner(['%4\tshell\t1\t0\t/Users/tung\t104\tzsh\tfour']);
   const store = new SnapshotStore();
   await store.recordAgentEvent(piEvent('user-message', { text: 'This process has exited' }, 1_700_000_000_000, '%4'), runner);
 
   await withDaemon(store, runner, async (socketPath) => {
     const snapshot = await loadSwitcherSnapshot({ runner, socketPath, now: 1_700_000_001_000 });
-    assert.equal(snapshot.panes.some((pane) => pane.id === 'tmux:%4'), false);
+    const pane = snapshot.panes.find((candidate) => candidate.id === 'tmux:%4');
+    assert.equal(pane?.agentType, undefined);
+    assert.equal(pane?.status, 'idle');
+    assert.equal(pane?.summary, 'four');
   });
 });
 

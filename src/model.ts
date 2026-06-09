@@ -2,6 +2,8 @@ export type AgentStatus = 'working' | 'needs_input' | 'stalled' | 'unknown' | 'i
 
 export type AgentType = 'pi' | 'claude' | 'codex' | 'opencode';
 
+export type PaneKind = 'agent' | 'terminal';
+
 export type TerminalBackend = 'tmux';
 
 export interface BaseTerminalTarget {
@@ -50,9 +52,10 @@ export interface ObservationCapability {
   terminalPreview: boolean;
 }
 
-export interface AgentPane {
+export interface TerminalPane {
   id: string;
-  agentType: AgentType;
+  kind?: PaneKind;
+  agentType?: AgentType;
   status: AgentStatus;
   summary: string;
   userMessage?: string;
@@ -70,6 +73,8 @@ export interface AgentPane {
   outputHash?: string;
   outputChangedAt?: number;
 }
+
+export type AgentPane = TerminalPane;
 
 export interface SwitcherSnapshot {
   panes: AgentPane[];

@@ -1,9 +1,10 @@
 import { AgentPane, AgentStatus, STATUS_RANK, SwitcherSnapshot, isRunningAgentStatus } from './model.js';
 import { activationTargetLabel } from './activation.js';
-import { terminalTargetCommand, terminalTargetCwd, terminalTargetPid } from './terminalTarget.js';
+import { terminalTargetCommand, terminalTargetCwd, terminalTargetPid, terminalTargetTitle } from './terminalTarget.js';
 import { basename, bold, dim, fit, formatAge, line, selected, shortPath, singleLine } from './text.js';
 
 export type LayoutMode = 'narrow' | 'medium' | 'wide';
+export type PaneFilterMode = 'agents' | 'all';
 
 export interface SwitcherRenderState {
   selectedPaneId?: string;
@@ -13,6 +14,7 @@ export interface SwitcherRenderState {
   home?: string;
   frameIndex?: number;
   chromeHidden?: boolean;
+  paneFilter?: PaneFilterMode;
 }
 
 interface PaneGroupInfo {
@@ -65,6 +67,14 @@ function statusDot(status: AgentStatus, useColor: boolean, frameIndex = 0): stri
   return useColor ? `${statusColors[status]}${glyph}\x1b[0m` : glyph;
 }
 
+function paneFilterMode(mode: PaneFilterMode | undefined): PaneFilterMode {
+  return mode ?? 'agents';
+}
+
+export function filterPanesByMode(panes: AgentPane[], mode: PaneFilterMode | undefined): AgentPane[] {
+  return paneFilterMode(mode) === 'all' ? panes : panes.filter((pane) => Boolean(pane.agentType));
+}
+
 function paneGroup(pane: AgentPane, home?: string): PaneGroupInfo {
   if (pane.git?.repo && pane.git.worktreePath) {
     return {
@@ -92,12 +102,16 @@ function ageSeconds(pane: AgentPane, now: number): number {
   return Math.max(0, Math.floor((now - pane.updatedAt) / 1000));
 }
 
-function paneSort(now: number): (a: AgentPane, b: AgentPane) => number {
-  return (a, b) => STATUS_RANK[a.status] - STATUS_RANK[b.status] || b.updatedAt - a.updatedAt || a.id.localeCompare(b.id);
+function paneRank(pane: AgentPane): number {
+  return STATUS_RANK[pane.status] * 2 + (pane.agentType ? 0 : 1);
+}
+
+function paneSort(): (a: AgentPane, b: AgentPane) => number {
+  return (a, b) => paneRank(a) - paneRank(b) || b.updatedAt - a.updatedAt || a.id.localeCompare(b.id);
 }
 
 function collectionRank(items: AgentPane[]): number {
-  return Math.min(...items.map((pane) => STATUS_RANK[pane.status]));
+  return Math.min(...items.map((pane) => paneRank(pane)));
 }
 
 function collectionNewest(items: AgentPane[]): number {
@@ -124,7 +138,7 @@ export function groupPanes(panes: AgentPane[], now: number = Date.now(), home?: 
   return [...repos.values()]
     .map((repo) => {
       const worktrees = [...repo.worktrees.values()]
-        .map((worktree) => ({ ...worktree, panes: [...worktree.panes].sort(paneSort(now)) }))
+        .map((worktree) => ({ ...worktree, panes: [...worktree.panes].sort(paneSort()) }))
         .sort((a, b) => collectionRank(a.panes) - collectionRank(b.panes) || collectionNewest(b.panes) - collectionNewest(a.panes));
       return { key: repo.key, title: repo.title, isGit: repo.isGit, worktrees };
     })
@@ -160,26 +174,30 @@ export function initialSelectionAfterLastActivated(panes: AgentPane[], lastActiv
   return candidates[0]?.id;
 }
 
-function headerLines(width: number, groups: RepoGroup[], layout: LayoutMode, useColor: boolean): string[] {
+function headerLines(width: number, groups: RepoGroup[], layout: LayoutMode, mode: PaneFilterMode, useColor: boolean): string[] {
   const worktreeCount = groups.reduce((count, repo) => count + repo.worktrees.length, 0);
   const paneCount = selectablePanes(groups).length;
+  const paneLabel = mode === 'agents' ? 'agent panes' : 'panes';
   return [
-    fit(`${bold('Watcher', useColor)} ${dim(`${groups.length} repos · ${worktreeCount} worktrees · ${paneCount} running agents · repo > worktree/branch > sessions · ${layout}`, useColor)}`, width, useColor),
+    fit(`${bold('Watcher', useColor)} ${dim(`${groups.length} repos · ${worktreeCount} worktrees · ${paneCount} ${paneLabel} · ${mode} · repo > worktree/branch > panes · ${layout}`, useColor)}`, width, useColor),
     fit(dim(line(width), useColor), width, useColor),
   ];
 }
 
-function emptyLines(snapshot: SwitcherSnapshot, width: number, height: number, useColor: boolean): string[] {
+function emptyLines(snapshot: SwitcherSnapshot, width: number, height: number, mode: PaneFilterMode, useColor: boolean): string[] {
+  const hasHiddenTerminalPanes = mode === 'agents' && snapshot.panes.some((pane) => !pane.agentType);
   const reason = !snapshot.tmuxAvailable
     ? 'tmux is not available or no tmux server is running.'
-    : !snapshot.daemonAvailable
-      ? 'No Watcher Daemon snapshot is available yet.'
-      : 'No running Agent Panes found.';
+    : mode === 'agents'
+      ? 'No agent panes found.'
+      : 'No tmux panes found.';
   const help = !snapshot.tmuxAvailable
-    ? 'Start tmux and run agent panes there; Watcher is local-tmux only.'
-    : !snapshot.daemonAvailable
-      ? 'Run watcher daemon or install integrations; unintegrated discovery arrives in the full switcher.'
-      : 'Start pi, claude, codex, or opencode in a tmux pane and try again.';
+    ? 'Start tmux; Watcher is local-tmux only.'
+    : hasHiddenTerminalPanes
+      ? 'Press a to show all tmux panes.'
+      : mode === 'agents'
+        ? 'Start an agent in tmux, or press a to show all panes.'
+        : 'Create a tmux pane and try again.';
   const body = [
     '',
     bold('Nothing to activate', useColor),
@@ -202,12 +220,21 @@ function worktreeHeader(worktree: WorktreeGroup, width: number, useColor: boolea
   return fit(`  ${bold(shortPath(worktree.path, home), useColor)}`, width, useColor);
 }
 
+function paneTypeLabel(pane: AgentPane): string {
+  return pane.agentType ?? terminalTargetCommand(pane.target) ?? 'pane';
+}
+
+function paneRowLabel(pane: AgentPane): string {
+  if (pane.agentType) return pane.summary || '(no summary yet)';
+  return (terminalTargetTitle(pane.target) ?? terminalTargetCommand(pane.target) ?? pane.summary) || '(untitled pane)';
+}
+
 function paneRow(pane: AgentPane, width: number, layout: LayoutMode, selectedPane: boolean, useColor: boolean, frameIndex: number): string {
   const dot = selectedPane ? statusDot(pane.status, false, frameIndex) : statusDot(pane.status, useColor, frameIndex);
-  const summary = pane.summary || '(no summary yet)';
+  const label = paneRowLabel(pane);
   const row = layout === 'narrow'
-    ? `${dot} ${fit(summary, Math.max(8, width - 8), useColor)}`
-    : `${dot} ${fit(pane.agentType, 7, useColor)} ${fit(summary, Math.max(18, width - 18), useColor)}`;
+    ? `${dot} ${fit(label, Math.max(8, width - 8), useColor)}`
+    : `${dot} ${fit(paneTypeLabel(pane), 7, useColor)} ${fit(label, Math.max(18, width - 18), useColor)}`;
   const padded = fit(`    ${row}`, width, useColor);
   return selectedPane ? selected(padded, useColor) : padded;
 }
@@ -318,16 +345,17 @@ function spacedSections(sections: string[][]): string[] {
 
 function detailContent(pane: AgentPane, now: number, home: string | undefined, width: number, useColor: boolean): string[] {
   const group = paneGroup(pane, home);
+  const isAgentPane = Boolean(pane.agentType);
   const lastMessage = singleLine(pane.lastMessage ?? '').trim();
   const fallbackSummary = singleLine(pane.summary || '(no summary yet)').trim();
   const userMessage = singleLine(pane.userMessage ?? '').trim();
   const summary = userMessage || fallbackSummary;
   const placeholderSummary = !userMessage && (fallbackSummary === 'Waiting for first task' || fallbackSummary.startsWith('Detected ') || fallbackSummary === 'Finished');
-  const showSummary = summary && !placeholderSummary && (userMessage || !isDuplicateDetailText(summary, lastMessage ? [lastMessage] : []));
+  const showSummary = isAgentPane && summary && !placeholderSummary && (userMessage || !isDuplicateDetailText(summary, lastMessage ? [lastMessage] : []));
   const messageWidth = Math.max(12, width - 4);
-  const fallbackDiscovered = pane.currentAction === DISCOVERY_FALLBACK_ACTION;
+  const fallbackDiscovered = isAgentPane && pane.currentAction === DISCOVERY_FALLBACK_ACTION;
   const taskLines = showSummary && !fallbackDiscovered ? wrapText(summary, messageWidth, 4).map((value) => `${bold('▸', useColor)} ${value}`) : [];
-  const activityLines = (pane.status === 'working' || pane.status === 'needs_input')
+  const activityLines = isAgentPane && (pane.status === 'working' || pane.status === 'needs_input')
     ? (pane.activityItems ?? []).flatMap((item) => {
       const marker = item.kind === 'tool' ? '⚙' : '▌';
       const state = item.state && item.kind === 'tool' ? ` ${item.state}` : '';
@@ -338,17 +366,18 @@ function detailContent(pane: AgentPane, now: number, home: string | undefined, w
         : [`${bold(marker, useColor)} ${label}`];
     })
     : [];
-  const assistantValues = fallbackDiscovered ? [lastMessage] : activityLines.length > 0 ? [] : [lastMessage, pane.currentAction];
+  const assistantValues = !isAgentPane ? [] : fallbackDiscovered ? [lastMessage] : activityLines.length > 0 ? [] : [lastMessage, pane.currentAction];
   const assistantLines = uniqueDetailText(assistantValues)
     .flatMap((value) => wrapText(value, messageWidth, 5).map((line) => `${bold('▌', useColor)} ${line}`));
   const command = terminalTargetCommand(pane.target);
+  const title = terminalTargetTitle(pane.target);
   const pid = terminalTargetPid(pane.target);
   const cwd = pane.cwd ? shortPath(pane.cwd, home) : undefined;
   const locationPath = shortPath(group.path, home);
   const cwdLine = cwd && cwd !== locationPath ? labelledLine('cwd', cwd) : undefined;
   return spacedSections([
     detailSection('Status', [
-      `${statusDot(pane.status, useColor, now)} ${pane.agentType} · ${pane.status} · updated ${formatAge(ageSeconds(pane, now))} ago`,
+      `${statusDot(pane.status, useColor, now)} ${paneTypeLabel(pane)} · ${pane.status} · updated ${formatAge(ageSeconds(pane, now))} ago`,
       fallbackDiscovered ? 'discovered by tmux process scan; no integration events received yet' : undefined,
       pane.reportedStatus && pane.reportedStatus !== pane.status ? `reported  ${pane.reportedStatus}` : undefined,
     ], useColor),
@@ -364,6 +393,7 @@ function detailContent(pane: AgentPane, now: number, home: string | undefined, w
     detailSection('Terminal', [
       labelledLine('target', tmuxTarget(pane)),
       labelledLine('backend', pane.target.backend),
+      labelledLine('title', title),
       labelledLine('command', command),
       pid === undefined ? undefined : labelledLine('pid', String(pid)),
     ], useColor),
@@ -401,17 +431,18 @@ function renderWide(groups: RepoGroup[], width: number, height: number, layout: 
   return Array.from({ length: height }, (_, index) => `${fit(left[index] || '', leftWidth, useColor)} ${dim('│', useColor)} ${fit(right[index] || '', rightWidth, useColor)}`);
 }
 
-function stateModeLabel(layout: LayoutMode): string {
-  return `${layout}:auto`;
+function stateModeLabel(layout: LayoutMode, mode: PaneFilterMode): string {
+  return `${layout}:${mode}`;
 }
 
-function helpLines(width: number, layout: LayoutMode, selectedPane: AgentPane | undefined, useColor: boolean, home?: string): string[] {
-  const keys = width < 72 ? '↑/↓ select · enter activate · ? hide · q quit' : '↑/↓ or j/k select · enter activate · ? hide summary/help · q quit';
+function helpLines(width: number, layout: LayoutMode, selectedPane: AgentPane | undefined, mode: PaneFilterMode, useColor: boolean, home?: string): string[] {
+  const toggle = mode === 'agents' ? 'a all' : 'a agents';
+  const keys = width < 72 ? `↑/↓ select · enter activate · ${toggle} · ? hide · q quit` : `↑/↓ or j/k select · enter activate · ${toggle} · ? hide summary/help · q quit`;
   if (layout === 'wide' || !selectedPane) return [fit(dim(line(width), useColor), width, useColor), fit(dim(keys, useColor), width, useColor)];
   const group = paneGroup(selectedPane, home);
   const label = group.isGit ? `${group.repoTitle} · ${group.branch} · ${shortPath(group.path, home)}` : `${shortPath(group.path, home)}`;
-  const mode = stateModeLabel(layout);
-  const selectedState = `${tmuxTarget(selectedPane)} · ${selectedPane.agentType} · ${selectedPane.status} · ${label} · ${mode}`;
+  const modeLabel = stateModeLabel(layout, mode);
+  const selectedState = `${tmuxTarget(selectedPane)} · ${paneTypeLabel(selectedPane)} · ${selectedPane.status} · ${label} · ${modeLabel}`;
   return [
     fit(dim(line(width), useColor), width, useColor),
     fit(`${bold('selected', useColor)} ${selectedState}`, width, useColor),
@@ -431,18 +462,21 @@ export function renderSwitcherFrame(snapshot: SwitcherSnapshot, width: number, h
   const useColor = state.useColor ?? false;
   const now = snapshot.now ?? Date.now();
   const layout = chooseLayout(width, state.layoutOverride);
-  const groups = groupPanes(snapshot.panes, now, state.home);
-  const header = state.chromeHidden ? [] : headerLines(width, groups, layout, useColor);
+  const mode = paneFilterMode(state.paneFilter);
+  const groups = groupPanes(filterPanesByMode(snapshot.panes, mode), now, state.home);
+  const header = state.chromeHidden ? [] : headerLines(width, groups, layout, mode, useColor);
   if (groups.length === 0) {
-    const help = state.chromeHidden ? [] : [fit(dim(line(width), useColor), width, useColor), fit(dim('q / Esc / Ctrl-C quits', useColor), width, useColor)];
-    const body = emptyLines(snapshot, width, Math.max(1, height - header.length - help.length), useColor);
+    const toggle = mode === 'agents' ? 'a show all panes' : 'a show agents only';
+    const emptyHelp = snapshot.tmuxAvailable ? `${toggle} · q / Esc / Ctrl-C quits` : 'q / Esc / Ctrl-C quits';
+    const help = state.chromeHidden ? [] : [fit(dim(line(width), useColor), width, useColor), fit(dim(emptyHelp, useColor), width, useColor)];
+    const body = emptyLines(snapshot, width, Math.max(1, height - header.length - help.length), mode, useColor);
     return finalizeFrame([...header, ...body, ...help], width, height, useColor);
   }
   const panes = selectablePanes(groups);
   const selectedPaneId = panes.some((pane) => pane.id === state.selectedPaneId) ? state.selectedPaneId! : panes[0]!.id;
   state.selectedPaneId = selectedPaneId;
   const selectedPane = panes.find((pane) => pane.id === selectedPaneId);
-  const help = state.chromeHidden ? [] : helpLines(width, layout, selectedPane, useColor, state.home);
+  const help = state.chromeHidden ? [] : helpLines(width, layout, selectedPane, mode, useColor, state.home);
   const bodyHeight = Math.max(1, height - header.length - help.length);
   const body = layout === 'wide'
     ? renderWide(groups, width, bodyHeight, layout, state, selectedPaneId, now)

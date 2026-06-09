@@ -2,7 +2,7 @@ import { AgentPane, TmuxTarget } from './model.js';
 import type { AgentProcessInfo } from './agents/types.js';
 import { detectAgentFromProcess, getAgentIntegration } from './agents/registry.js';
 import { canonicalSurfaceKey, surfaceFromTarget } from './surfaceIdentity.js';
-import { terminalTargetCommand, terminalTargetCwd, terminalTargetPid } from './terminalTarget.js';
+import { terminalTargetCommand, terminalTargetCwd, terminalTargetLabel, terminalTargetPid, terminalTargetTitle } from './terminalTarget.js';
 import { CommandRunner, nodeCommandRunner } from './tmux.js';
 import { captureTmuxPanePreview, listTmuxPanes } from './tmuxContext.js';
 import { discoverGitMetadata } from './git.js';
@@ -38,6 +38,10 @@ function isProcessInfo(value: AgentProcessInfo | undefined): value is AgentProce
   return Boolean(value);
 }
 
+function terminalPaneSummary(pane: TmuxTarget): string {
+  return terminalTargetTitle(pane) ?? terminalTargetCommand(pane) ?? terminalTargetLabel(pane);
+}
+
 async function childProcesses(parentPid: number | undefined, runner: CommandRunner): Promise<AgentProcessInfo[]> {
   if (!parentPid || Number.isNaN(parentPid)) return [];
   try {
@@ -71,21 +75,15 @@ export async function observeTerminalAgentPanes(runner: CommandRunner = nodeComm
     return { tmuxAvailable: false, livePaneIds: new Set(), liveAgentProcessPaneIds: new Set(), discoveredPanes: [] };
   }
   const discovered: AgentPane[] = [];
+  const liveAgentProcessPaneIds = new Set<string>();
   for (const tmux of panes) {
     const agentType = await detectKnownAgent(tmux, runner);
-    if (!agentType) continue;
     const cwd = terminalTargetCwd(tmux);
-    const integration = getAgentIntegration(agentType);
-    const waitsForEvents = integration.capabilities.eventSourceInstall === 'supported';
     const terminalPreview = await captureTmuxPanePreview(tmux.paneId, runner);
-    discovered.push({
+    const base = {
       id: canonicalSurfaceKey(surfaceFromTarget(tmux)),
-      agentType,
-      status: 'unknown',
-      summary: waitsForEvents ? 'Waiting for first Watcher event' : `Detected ${agentType} process`,
-      currentAction: 'tmux/process discovery fallback',
       observation: {
-        source: 'terminal',
+        source: 'terminal' as const,
         semanticEvents: false,
         assistantDeltas: false,
         terminalPreview: Boolean(terminalPreview),
@@ -95,12 +93,32 @@ export async function observeTerminalAgentPanes(runner: CommandRunner = nodeComm
       cwd,
       git: await discoverGitMetadata(cwd, runner),
       updatedAt: now,
+    };
+    if (agentType) {
+      liveAgentProcessPaneIds.add(base.id);
+      const integration = getAgentIntegration(agentType);
+      const waitsForEvents = integration.capabilities.eventSourceInstall === 'supported';
+      discovered.push({
+        ...base,
+        kind: 'agent',
+        agentType,
+        status: 'unknown',
+        summary: waitsForEvents ? 'Waiting for first Watcher event' : `Detected ${agentType} process`,
+        currentAction: 'tmux/process discovery fallback',
+      });
+      continue;
+    }
+    discovered.push({
+      ...base,
+      kind: 'terminal',
+      status: 'idle',
+      summary: terminalPaneSummary(tmux),
     });
   }
   return {
     tmuxAvailable: true,
     livePaneIds: new Set(panes.map((pane) => canonicalSurfaceKey(surfaceFromTarget(pane)))),
-    liveAgentProcessPaneIds: new Set(discovered.map((pane) => pane.id)),
+    liveAgentProcessPaneIds,
     discoveredPanes: discovered,
   };
 }

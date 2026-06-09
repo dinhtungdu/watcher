@@ -1,5 +1,5 @@
 import { loadSwitcherSnapshot } from './snapshot.js';
-import { groupPanes, initialSelectionAfterLastActivated, moveSelection, renderSwitcherFrame, selectablePanes, SwitcherRenderState } from './switcherLayout.js';
+import { filterPanesByMode, groupPanes, initialSelectionAfterLastActivated, moveSelection, renderSwitcherFrame, selectablePanes, SwitcherRenderState } from './switcherLayout.js';
 import { createStallTracker } from './stalled.js';
 import { activateAgentPane } from './activation.js';
 import { AgentPane, SwitcherSnapshot } from './model.js';
@@ -26,6 +26,7 @@ export async function runAnsiSwitcher(): Promise<void> {
     useColor: Boolean(process.stdout.isTTY && !process.env.NO_COLOR),
     home: process.env.HOME,
     chromeHidden,
+    paneFilter: 'agents',
   };
   const stallTracker = createStallTracker();
   let currentSnapshot: SwitcherSnapshot | undefined;
@@ -49,7 +50,7 @@ export async function runAnsiSwitcher(): Promise<void> {
   function renderCachedFrame(): void {
     if (closed || !currentSnapshot) return;
     state.frameIndex = (state.frameIndex ?? 0) + 1;
-    currentPanes = selectablePanes(groupPanes(currentSnapshot.panes, currentSnapshot.now, state.home));
+    currentPanes = selectablePanes(groupPanes(filterPanesByMode(currentSnapshot.panes, state.paneFilter), currentSnapshot.now, state.home));
     if (currentPanes.length > 0 && !currentPanes.some((pane) => pane.id === state.selectedPaneId)) {
       state.selectedPaneId = initialSelectionApplied ? currentPanes[0]?.id : initialSelectionAfterLastActivated(currentPanes, lastActivatedPaneId);
       initialSelectionApplied = true;
@@ -102,6 +103,11 @@ export async function runAnsiSwitcher(): Promise<void> {
     renderCachedFrame();
   }
 
+  function togglePaneFilter(): void {
+    state.paneFilter = state.paneFilter === 'all' ? 'agents' : 'all';
+    renderCachedFrame();
+  }
+
   function inputHandler(buffer: Buffer): void {
     const input = buffer.toString('utf8');
     if (input === '\u0003' || input === 'q' || input === '\x1b') {
@@ -120,6 +126,10 @@ export async function runAnsiSwitcher(): Promise<void> {
     }
     if (input === '?') {
       toggleChrome();
+      return;
+    }
+    if (input === 'a') {
+      togglePaneFilter();
       return;
     }
     if (input === '\r' || input === '\n') {

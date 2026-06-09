@@ -10,7 +10,7 @@ export function terminalTargetCwd(target: TerminalTarget): string | undefined {
 }
 
 export function terminalTargetTitle(target: TerminalTarget): string | undefined {
-  return target.title ?? target.paneTitle ?? target.windowName;
+  return target.title || target.paneTitle || target.windowName;
 }
 
 export function terminalTargetPid(target: TerminalTarget): number | undefined {
@@ -33,7 +33,7 @@ export function tmuxTarget(fields: Omit<TmuxTarget, 'backend' | 'id'> & { id?: s
     backend: 'tmux',
     id: fields.id ?? fields.paneId,
     cwd: fields.cwd ?? fields.paneCurrentPath,
-    title: fields.title ?? fields.paneTitle ?? fields.windowName,
+    title: fields.title || fields.paneTitle || fields.windowName,
     pid: fields.pid ?? fields.panePid,
     currentCommand: fields.currentCommand ?? fields.paneCurrentCommand,
     ...fields,

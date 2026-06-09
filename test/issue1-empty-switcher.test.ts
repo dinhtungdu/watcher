@@ -28,17 +28,17 @@ test('empty switcher explains no tmux state', async () => {
   assert.match(text, /q \/ Esc \/ Ctrl-C quits/);
 });
 
-test('empty switcher explains daemon snapshot absence when tmux exists', async () => {
+test('empty switcher defaults to agent-only mode when tmux exists', async () => {
   const snapshot = await loadSwitcherSnapshot({ runner: runningTmux, now: 1_700_000_000_000, socketPath: absentDaemonSocket });
   const frame = renderSwitcherFrame(snapshot, 90, 18, { useColor: false });
   const text = frame.join('\n');
-  assert.match(text, /No Watcher Daemon snapshot is available yet/);
-  assert.match(text, /Run watcher daemon or install integrations/);
+  assert.match(text, /No agent panes found/);
+  assert.match(text, /press a to show all panes/i);
 });
 
 test('empty switcher renders at least terminal-sized frame', () => {
   const frame = renderSwitcherFrame({ panes: [], daemonAvailable: true, tmuxAvailable: true, now: 1_700_000_000_000 }, 70, 5, { useColor: false });
   assert.equal(frame.length, 10);
   assert.ok(frame.every((line) => line.length >= 70));
-  assert.match(frame.join('\n'), /No running Agent Panes found/);
+  assert.match(frame.join('\n'), /No agent panes found/);
 });

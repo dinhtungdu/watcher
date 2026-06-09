@@ -58,6 +58,7 @@ function basePane(previous: AgentPane | undefined, input: WatcherAgentEventInput
   return {
     ...previous,
     id: canonicalSurfaceKey(input.surface),
+    kind: 'agent',
     agentType: input.agent,
     status,
     reportedStatus: status === 'stalled' ? 'working' : status,
